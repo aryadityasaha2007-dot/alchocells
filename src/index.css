@@ -95,7 +95,7 @@ button:active { transform: translateY(1px); }
 
 
 /* ================= LIGHT THEME ================= */
-html.light body { background: #f4f7fb !important; color: #0f172a; }
+html.light body { background: #8E8E93 !important; color: #0f172a; }
 html.light .min-h-screen { background: #f4f7fb !important; }
 html.light header.bg-slate-900 { background: #ffffff !important; border-color: #dbe3ef !important; }
 
