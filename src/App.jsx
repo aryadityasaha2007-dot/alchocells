@@ -1098,7 +1098,7 @@ React.useEffect(() => {
 
   // Structured Engineering Report & JSON Export (Fixes C6)
   const buildStructuredReportText = () => {
-    return `VoltTwin Studio PRO — Traceable Engineering & Design Contract Report
+    return `Simulate First. Build Next.
 =====================================================================
 1. SCOPE & TARGET APPLICATION
    Application:        ${config.application} (${appProfile.roleBadge})
@@ -2282,8 +2282,8 @@ React.useEffect(() => {
           <div className="bg-slate-900 border border-slate-700 rounded-lg max-w-3xl w-full p-6 space-y-4 max-h-[85vh] flex flex-col shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <div>
-                <h3 className="text-base font-bold text-white">Traceable Engineering Report & JSON Artifact</h3>
-                <p className="text-xs text-slate-400">Copied to clipboard — ready for TELIPORT Season 4 presentation & documentation</p>
+                <h3 className="text-base font-bold text-white">AlchoCells</h3>
+                <p className="text-xs text-slate-400">Copied to clipboard </p>
               </div>
               <button
                 type="button"
