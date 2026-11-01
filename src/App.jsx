@@ -1307,7 +1307,13 @@ React.useEffect(() => {
               Retail
             </button>
           </div>
-
+<button
+  type="button"
+  onClick={() => setLightMode(m => !m)}
+  className="px-3 py-2 rounded text-xs font-bold border border-slate-700 bg-slate-800 text-slate-200"
+>
+  {lightMode ? 'Dark mode' : 'Light mode'}
+</button>
           {copySuccess && <span className="text-emerald-400 text-sm flex items-center"><CheckCircle2 className="w-4 h-4 mr-1"/> {copySuccess}</span>}
           <button
             onClick={exportSummary}
