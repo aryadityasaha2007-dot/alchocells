@@ -1,3 +1,46 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+/* ---- Appearance refresh (layout and options unchanged) ---- */
+body {
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+}
+
+/* page background with a soft glow */
+.min-h-screen.bg-slate-950 {
+  background:
+    radial-gradient(1100px 520px at 8% -8%, #162a52 0%, transparent 60%),
+    radial-gradient(900px 480px at 100% 0%, #0f3a44 0%, transparent 55%),
+    #070b14 !important;
+}
+
+/* header */
+header.bg-slate-900 {
+  background: linear-gradient(90deg, #0d1426 0%, #14224a 100%) !important;
+}
+
+/* cards and panels */
+.bg-slate-900 { background-color: #0e1628 !important; }
+.bg-slate-950 { background-color: #0a1120 !important; }
+.border-slate-800 { border-color: #1d2a47 !important; }
+.bg-slate-900.rounded-md {
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+
+/* rounder corners */
+.rounded-md { border-radius: 16px !important; }
+.rounded { border-radius: 10px !important; }
+
+/* inputs and dropdowns */
+select, input[type="number"] {
+  border-radius: 10px !important;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+select:focus, input[type="number"]:focus {
+  box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.25);
+}
+
+/* buttons */
+button { transition: transform 0.12s, filter 0.12s; }
+button:hover { filter: brightness(1.08); }
+button:active { transform: translateY(1px); }
