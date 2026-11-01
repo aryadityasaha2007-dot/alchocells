@@ -288,6 +288,9 @@ button:active {
 
 /* ===== DEEP TEAL & TERRACOTTA LIGHT THEME ===== */
 
+
+/* ===== DEEP TEAL & TERRACOTTA LIGHT THEME ===== */
+
 html.light body {
   background: #F4F1ED !important;
   color: #0F3040 !important;
@@ -299,6 +302,11 @@ html.light .min-h-screen {
 }
 
 html.light header.bg-slate-900 {
+  background: #FFFFFF !important;
+  border-color: #DED8D2 !important;
+}
+
+html.light [role="tablist"] {
   background: #FFFFFF !important;
   border-color: #DED8D2 !important;
 }
@@ -377,14 +385,13 @@ html.light .text-slate-600 {
   color: #85818A !important;
 }
 
-/* primary accent: deep teal */
+/* accent text */
 html.light .text-cyan-300,
 html.light .text-cyan-400,
 html.light .text-cyan-500 {
   color: #0F5260 !important;
 }
 
-/* secondary accent: terracotta */
 html.light .text-emerald-400,
 html.light .text-emerald-500 {
   color: #A56F63 !important;
@@ -399,11 +406,31 @@ html.light .text-blue-400 {
   color: #345D73 !important;
 }
 
-/* warm highlights */
+html.light .text-rose-300,
+html.light .text-rose-400,
+html.light .text-red-300,
+html.light .text-red-400 {
+  color: #BE5555 !important;
+}
+
+html.light .text-amber-300,
+html.light .text-amber-400 {
+  color: #98602F !important;
+}
+
 html.light .text-orange-400 {
   color: #A56F63 !important;
 }
 
+html.light .text-rose-200 {
+  color: #9F4148 !important;
+}
+
+html.light .text-amber-200 {
+  color: #80552F !important;
+}
+
+/* borders and accent backgrounds */
 html.light .border-cyan-500 {
   border-color: #0F3040 !important;
 }
@@ -414,7 +441,6 @@ html.light .border-cyan-500\/40 {
   border-color: #A5B6B8 !important;
 }
 
-/* accent backgrounds */
 html.light .bg-cyan-500\/20 {
   background-color: rgba(15, 48, 64, 0.10) !important;
 }
@@ -496,11 +522,6 @@ html.light .bg-blue-950\/80 {
   background-color: #E5EDF1 !important;
 }
 
-html.light .bg-cyan-950\/30 {
-  background-color: #E5EFF0 !important;
-}
-
-/* status borders */
 html.light .border-rose-800,
 html.light .border-rose-700,
 html.light .border-red-800 {
@@ -519,21 +540,6 @@ html.light .border-emerald-700 {
 
 html.light .border-blue-800 {
   border-color: #A9C3D2 !important;
-}
-
-/* status text */
-html.light .text-rose-200,
-html.light .text-rose-300,
-html.light .text-rose-400,
-html.light .text-red-300,
-html.light .text-red-400 {
-  color: #A74748 !important;
-}
-
-html.light .text-amber-200,
-html.light .text-amber-300,
-html.light .text-amber-400 {
-  color: #98602F !important;
 }
 
 /* charts */
