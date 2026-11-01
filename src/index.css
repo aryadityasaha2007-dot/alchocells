@@ -44,3 +44,64 @@ select:focus, input[type="number"]:focus {
 button { transition: transform 0.12s, filter 0.12s; }
 button:hover { filter: brightness(1.08); }
 button:active { transform: translateY(1px); }
+
+
+/* ================= LIGHT THEME ================= */
+html.light body { background: #f4f7fb !important; color: #0f172a; }
+html.light .min-h-screen { background: #f4f7fb !important; }
+html.light header.bg-slate-900 { background: #ffffff !important; border-color: #dbe3ef !important; }
+
+/* surfaces */
+html.light .bg-slate-900 { background-color: #ffffff !important; }
+html.light .bg-slate-950 { background-color: #f1f5f9 !important; }
+html.light .bg-slate-800 { background-color: #e8eef6 !important; }
+html.light .bg-slate-700 { background-color: #cbd5e1 !important; }
+html.light .bg-slate-950\/60, html.light .bg-slate-950\/50 { background-color: #f1f5f9 !important; }
+html.light .bg-slate-900\/90 { background-color: #f8fafc !important; }
+html.light .bg-slate-800\/50 { background-color: #eef3f9 !important; }
+html.light .bg-slate-950\/80 { background-color: rgba(226, 232, 240, 0.85) !important; }
+html.light .bg-slate-900.rounded-md { box-shadow: 0 6px 20px rgba(15, 23, 42, 0.08); }
+
+/* borders */
+html.light .border-slate-800 { border-color: #dbe3ef !important; }
+html.light .border-slate-700 { border-color: #c5d0e0 !important; }
+html.light .divide-slate-800 > :not([hidden]) ~ :not([hidden]) { border-color: #dbe3ef !important; }
+
+/* text */
+html.light .text-white, html.light .text-slate-100, html.light .text-slate-200 { color: #0f172a !important; }
+html.light .text-slate-300 { color: #1e293b !important; }
+html.light .text-slate-400 { color: #475569 !important; }
+html.light .text-slate-500 { color: #64748b !important; }
+html.light .text-slate-600 { color: #94a3b8 !important; }
+
+/* accent text (darker so it reads on white) */
+html.light .text-cyan-300, html.light .text-cyan-400, html.light .text-cyan-500 { color: #0e7490 !important; }
+html.light .text-emerald-400, html.light .text-emerald-500 { color: #047857 !important; }
+html.light .text-rose-300, html.light .text-rose-400, html.light .text-red-300, html.light .text-red-400 { color: #be123c !important; }
+html.light .text-amber-300, html.light .text-amber-400 { color: #b45309 !important; }
+html.light .text-orange-400 { color: #c2410c !important; }
+html.light .text-blue-300, html.light .text-blue-400 { color: #1d4ed8 !important; }
+html.light .text-indigo-400 { color: #4338ca !important; }
+html.light .text-rose-200 { color: #9f1239 !important; }
+html.light .text-amber-200 { color: #92400e !important; }
+
+/* status boxes and chips */
+html.light .bg-rose-950\/40, html.light .bg-rose-950\/80, html.light .bg-red-950\/80, html.light .bg-red-900\/50 { background-color: #ffe4e6 !important; }
+html.light .bg-amber-950\/40, html.light .bg-amber-950\/80, html.light .bg-amber-900\/50 { background-color: #fef3c7 !important; }
+html.light .bg-emerald-950, html.light .bg-emerald-950\/80, html.light .bg-emerald-900\/50 { background-color: #d1fae5 !important; }
+html.light .bg-blue-950\/80 { background-color: #dbeafe !important; }
+html.light .bg-cyan-950\/30 { background-color: #cffafe !important; }
+html.light .border-rose-800, html.light .border-rose-700, html.light .border-red-800 { border-color: #fda4af !important; }
+html.light .border-amber-800, html.light .border-amber-700 { border-color: #fcd34d !important; }
+html.light .border-emerald-800, html.light .border-emerald-700 { border-color: #6ee7b7 !important; }
+html.light .border-blue-800 { border-color: #93c5fd !important; }
+
+/* hover states */
+html.light .hover\:bg-slate-800\/50:hover, html.light .hover\:bg-slate-800\/40:hover, html.light .hover\:bg-slate-800:hover { background-color: #eef3f9 !important; }
+html.light .hover\:bg-slate-700:hover { background-color: #d5deea !important; }
+html.light .hover\:text-white:hover, html.light .hover\:text-slate-200:hover { color: #0f172a !important; }
+
+/* charts (axis text, legends, grid lines) */
+html.light .recharts-text, html.light .recharts-text tspan { fill: #475569 !important; }
+html.light .recharts-legend-item-text { color: #334155 !important; }
+html.light .recharts-cartesian-grid line, html.light .recharts-polar-grid-concentric-polygon { stroke: #dbe3ef !important; }
