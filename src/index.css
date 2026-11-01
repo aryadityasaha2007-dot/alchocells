@@ -285,61 +285,281 @@ button:active {
 
 
 /* ================= LIGHT THEME ================= */
-html.light body { background: #8E8E93 !important; color: #0f172a; }
-html.light .min-h-screen { background: #f4f7fb !important; }
-html.light header.bg-slate-900 { background: #ffffff !important; border-color: #dbe3ef !important; }
+
+/* ===== DEEP TEAL & TERRACOTTA LIGHT THEME ===== */
+
+html.light body {
+  background: #F4F1ED !important;
+  color: #0F3040 !important;
+}
+
+html.light .min-h-screen {
+  background: #F4F1ED !important;
+  color: #0F3040 !important;
+}
+
+html.light header.bg-slate-900 {
+  background: #FFFFFF !important;
+  border-color: #DED8D2 !important;
+}
 
 /* surfaces */
-html.light .bg-slate-900 { background-color: #ffffff !important; }
-html.light .bg-slate-950 { background-color: #f1f5f9 !important; }
-html.light .bg-slate-800 { background-color: #e8eef6 !important; }
-html.light .bg-slate-700 { background-color: #cbd5e1 !important; }
-html.light .bg-slate-950\/60, html.light .bg-slate-950\/50 { background-color: #f1f5f9 !important; }
-html.light .bg-slate-900\/90 { background-color: #f8fafc !important; }
-html.light .bg-slate-800\/50 { background-color: #eef3f9 !important; }
-html.light .bg-slate-950\/80 { background-color: rgba(226, 232, 240, 0.85) !important; }
-html.light .bg-slate-900.rounded-md { box-shadow: 0 6px 20px rgba(15, 23, 42, 0.08); }
+html.light .bg-slate-900 {
+  background-color: #FFFFFF !important;
+}
+
+html.light .bg-slate-950 {
+  background-color: #ECE9E6 !important;
+}
+
+html.light .bg-slate-800 {
+  background-color: #E7E4E1 !important;
+}
+
+html.light .bg-slate-700 {
+  background-color: #D5CECA !important;
+}
+
+html.light .bg-slate-950\/60,
+html.light .bg-slate-950\/50 {
+  background-color: #ECE9E6 !important;
+}
+
+html.light .bg-slate-900\/90 {
+  background-color: #F8F6F3 !important;
+}
+
+html.light .bg-slate-800\/50 {
+  background-color: #F0ECE8 !important;
+}
+
+html.light .bg-slate-950\/80 {
+  background-color: rgba(236, 233, 230, 0.9) !important;
+}
+
+html.light .bg-slate-900.rounded-md {
+  box-shadow: 0 6px 22px rgba(15, 48, 64, 0.07);
+}
 
 /* borders */
-html.light .border-slate-800 { border-color: #dbe3ef !important; }
-html.light .border-slate-700 { border-color: #c5d0e0 !important; }
-html.light .divide-slate-800 > :not([hidden]) ~ :not([hidden]) { border-color: #dbe3ef !important; }
+html.light .border-slate-800 {
+  border-color: #DED8D2 !important;
+}
+
+html.light .border-slate-700 {
+  border-color: #CCC3BC !important;
+}
+
+html.light .divide-slate-800 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #E5DFD9 !important;
+}
 
 /* text */
-html.light .text-white, html.light .text-slate-100, html.light .text-slate-200 { color: #0f172a !important; }
-html.light .text-slate-300 { color: #1e293b !important; }
-html.light .text-slate-400 { color: #475569 !important; }
-html.light .text-slate-500 { color: #64748b !important; }
-html.light .text-slate-600 { color: #94a3b8 !important; }
+html.light .text-white,
+html.light .text-slate-100,
+html.light .text-slate-200 {
+  color: #0F3040 !important;
+}
 
-/* accent text (darker so it reads on white) */
-html.light .text-cyan-300, html.light .text-cyan-400, html.light .text-cyan-500 { color: #0e7490 !important; }
-html.light .text-emerald-400, html.light .text-emerald-500 { color: #047857 !important; }
-html.light .text-rose-300, html.light .text-rose-400, html.light .text-red-300, html.light .text-red-400 { color: #be123c !important; }
-html.light .text-amber-300, html.light .text-amber-400 { color: #b45309 !important; }
-html.light .text-orange-400 { color: #c2410c !important; }
-html.light .text-blue-300, html.light .text-blue-400 { color: #1d4ed8 !important; }
-html.light .text-indigo-400 { color: #4338ca !important; }
-html.light .text-rose-200 { color: #9f1239 !important; }
-html.light .text-amber-200 { color: #92400e !important; }
+html.light .text-slate-300 {
+  color: #464858 !important;
+}
+
+html.light .text-slate-400 {
+  color: #656675 !important;
+}
+
+html.light .text-slate-500 {
+  color: #777783 !important;
+}
+
+html.light .text-slate-600 {
+  color: #85818A !important;
+}
+
+/* primary accent: deep teal */
+html.light .text-cyan-300,
+html.light .text-cyan-400,
+html.light .text-cyan-500 {
+  color: #0F5260 !important;
+}
+
+/* secondary accent: terracotta */
+html.light .text-emerald-400,
+html.light .text-emerald-500 {
+  color: #A56F63 !important;
+}
+
+html.light .text-indigo-400 {
+  color: #464858 !important;
+}
+
+html.light .text-blue-300,
+html.light .text-blue-400 {
+  color: #345D73 !important;
+}
+
+/* warm highlights */
+html.light .text-orange-400 {
+  color: #A56F63 !important;
+}
+
+html.light .border-cyan-500 {
+  border-color: #0F3040 !important;
+}
+
+html.light .border-cyan-800\/70,
+html.light .border-cyan-700\/60,
+html.light .border-cyan-500\/40 {
+  border-color: #A5B6B8 !important;
+}
+
+/* accent backgrounds */
+html.light .bg-cyan-500\/20 {
+  background-color: rgba(15, 48, 64, 0.10) !important;
+}
+
+html.light .bg-cyan-950\/30 {
+  background-color: rgba(15, 48, 64, 0.07) !important;
+}
+
+html.light .accent-cyan-500,
+html.light .accent-indigo-500,
+html.light .accent-blue-500 {
+  accent-color: #0F3040 !important;
+}
+
+/* buttons */
+html.light .bg-cyan-600,
+html.light .bg-cyan-500,
+html.light .bg-emerald-600 {
+  background: linear-gradient(135deg, #0F3040, #285466) !important;
+  color: #FFFFFF !important;
+}
+
+html.light .hover\:bg-cyan-500:hover {
+  background-color: #285466 !important;
+}
+
+html.light .hover\:bg-slate-800\/50:hover,
+html.light .hover\:bg-slate-800\/40:hover,
+html.light .hover\:bg-slate-800:hover {
+  background-color: #ECE9E6 !important;
+}
+
+html.light .hover\:bg-slate-700:hover {
+  background-color: #DED8D2 !important;
+}
+
+html.light .hover\:text-white:hover,
+html.light .hover\:text-slate-200:hover {
+  color: #A56F63 !important;
+}
+
+/* inputs and controls */
+html.light select,
+html.light input[type="number"] {
+  background-color: #FFFFFF !important;
+  border: 1px solid #CCC3BC !important;
+  color: #0F3040 !important;
+  border-radius: 10px !important;
+}
+
+html.light select:focus,
+html.light input[type="number"]:focus {
+  outline: none;
+  border-color: #0F5260 !important;
+  box-shadow: 0 0 0 3px rgba(15, 48, 64, 0.12);
+}
 
 /* status boxes and chips */
-html.light .bg-rose-950\/40, html.light .bg-rose-950\/80, html.light .bg-red-950\/80, html.light .bg-red-900\/50 { background-color: #ffe4e6 !important; }
-html.light .bg-amber-950\/40, html.light .bg-amber-950\/80, html.light .bg-amber-900\/50 { background-color: #fef3c7 !important; }
-html.light .bg-emerald-950, html.light .bg-emerald-950\/80, html.light .bg-emerald-900\/50 { background-color: #d1fae5 !important; }
-html.light .bg-blue-950\/80 { background-color: #dbeafe !important; }
-html.light .bg-cyan-950\/30 { background-color: #cffafe !important; }
-html.light .border-rose-800, html.light .border-rose-700, html.light .border-red-800 { border-color: #fda4af !important; }
-html.light .border-amber-800, html.light .border-amber-700 { border-color: #fcd34d !important; }
-html.light .border-emerald-800, html.light .border-emerald-700 { border-color: #6ee7b7 !important; }
-html.light .border-blue-800 { border-color: #93c5fd !important; }
+html.light .bg-rose-950\/40,
+html.light .bg-rose-950\/80,
+html.light .bg-red-950\/80,
+html.light .bg-red-900\/50 {
+  background-color: #F7E7E4 !important;
+}
 
-/* hover states */
-html.light .hover\:bg-slate-800\/50:hover, html.light .hover\:bg-slate-800\/40:hover, html.light .hover\:bg-slate-800:hover { background-color: #eef3f9 !important; }
-html.light .hover\:bg-slate-700:hover { background-color: #d5deea !important; }
-html.light .hover\:text-white:hover, html.light .hover\:text-slate-200:hover { color: #0f172a !important; }
+html.light .bg-amber-950\/40,
+html.light .bg-amber-950\/80,
+html.light .bg-amber-900\/50 {
+  background-color: #F8EDE2 !important;
+}
 
-/* charts (axis text, legends, grid lines) */
-html.light .recharts-text, html.light .recharts-text tspan { fill: #475569 !important; }
-html.light .recharts-legend-item-text { color: #334155 !important; }
-html.light .recharts-cartesian-grid line, html.light .recharts-polar-grid-concentric-polygon { stroke: #dbe3ef !important; }
+html.light .bg-emerald-950,
+html.light .bg-emerald-950\/80,
+html.light .bg-emerald-900\/50 {
+  background-color: #E5EFE9 !important;
+}
+
+html.light .bg-blue-950\/80 {
+  background-color: #E5EDF1 !important;
+}
+
+html.light .bg-cyan-950\/30 {
+  background-color: #E5EFF0 !important;
+}
+
+/* status borders */
+html.light .border-rose-800,
+html.light .border-rose-700,
+html.light .border-red-800 {
+  border-color: #DDA9A0 !important;
+}
+
+html.light .border-amber-800,
+html.light .border-amber-700 {
+  border-color: #E4C39F !important;
+}
+
+html.light .border-emerald-800,
+html.light .border-emerald-700 {
+  border-color: #A5C5B2 !important;
+}
+
+html.light .border-blue-800 {
+  border-color: #A9C3D2 !important;
+}
+
+/* status text */
+html.light .text-rose-200,
+html.light .text-rose-300,
+html.light .text-rose-400,
+html.light .text-red-300,
+html.light .text-red-400 {
+  color: #A74748 !important;
+}
+
+html.light .text-amber-200,
+html.light .text-amber-300,
+html.light .text-amber-400 {
+  color: #98602F !important;
+}
+
+/* charts */
+html.light .recharts-text,
+html.light .recharts-text tspan {
+  fill: #464858 !important;
+}
+
+html.light .recharts-legend-item-text {
+  color: #464858 !important;
+}
+
+html.light .recharts-cartesian-grid line,
+html.light .recharts-polar-grid-concentric-polygon {
+  stroke: #DED8D2 !important;
+}
+
+/* buttons and transitions */
+html.light button {
+  transition: all 0.2s ease;
+}
+
+html.light button:hover {
+  filter: brightness(0.96);
+}
+
+html.light button:active {
+  transform: translateY(1px);
+}
