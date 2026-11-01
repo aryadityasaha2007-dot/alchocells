@@ -798,7 +798,13 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('workbench');
   const [copySuccess, setCopySuccess] = useState('');
   const [showReportModal, setShowReportModal] = useState(false);
-
+const [lightMode, setLightMode] = useState(() => {
+  try { return localStorage.getItem('theme') === 'light'; } catch (e) { return false; }
+});
+React.useEffect(() => {
+  document.documentElement.classList.toggle('light', lightMode);
+  try { localStorage.setItem('theme', lightMode ? 'light' : 'dark'); } catch (e) {}
+}, [lightMode]);
   // Stage 6/7 Policy Controls: Model Mode Switch (Physics-Corrected vs Legacy) & Cost Basis
   const [modelMode, setModelMode] = useState('physics'); // 'physics' | 'legacy'
   const [costBasis, setCostBasis] = useState('volume');  // 'volume' | 'retail'
