@@ -1098,7 +1098,7 @@ React.useEffect(() => {
 
   // Structured Engineering Report & JSON Export (Fixes C6)
   const buildStructuredReportText = () => {
-    return `Simulate First. Build Next.
+    return `AlchoCells: Simulate First. Build Next.
 =====================================================================
 1. SCOPE & TARGET APPLICATION
    Application:        ${config.application} (${appProfile.roleBadge})
@@ -1263,10 +1263,10 @@ React.useEffect(() => {
           <Activity className="text-cyan-400 w-6 h-6" />
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold tracking-wide">Traceable Engineering Report<span className="font-light text-cyan-500"></span></h1>
+              <h1 className="text-xl font-bold tracking-wide">AlchoCells <span className="font-light text-cyan-500"></span></h1>
           
             </div>
-            <p className="text-[11px] text-slate-400">AlchoCells: Simulate First. Build Next.</p>
+            <p className="text-[11px] text-slate-400">Simulate First. Build Next.</p>
           </div>
         </div>
 
@@ -2282,7 +2282,7 @@ React.useEffect(() => {
           <div className="bg-slate-900 border border-slate-700 rounded-lg max-w-3xl w-full p-6 space-y-4 max-h-[85vh] flex flex-col shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <div>
-                <h3 className="text-base font-bold text-white">AlchoCells</h3>
+                <h3 className="text-base font-bold text-white">Traceable Engineering Report</h3>
                 <p className="text-xs text-slate-400">Copied to clipboard </p>
               </div>
               <button
