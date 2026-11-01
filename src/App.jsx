@@ -1263,10 +1263,10 @@ React.useEffect(() => {
           <Activity className="text-cyan-400 w-6 h-6" />
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold tracking-wide">AlchoCells<span className="font-light text-cyan-500"></span></h1>
+              <h1 className="text-xl font-bold tracking-wide">Traceable Engineering Report<span className="font-light text-cyan-500"></span></h1>
           
             </div>
-            <p className="text-[11px] text-slate-400">Simulate First. Build Next.</p>
+            <p className="text-[11px] text-slate-400">AlchoCells: Simulate First. Build Next.</p>
           </div>
         </div>
 
