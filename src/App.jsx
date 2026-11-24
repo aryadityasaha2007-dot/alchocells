@@ -13,6 +13,10 @@ import {
 // ============================================================================
 // 1. RECONCILED DATASHEET LIBRARY WITH PROVENANCE (Fixes D9, D12, C5)
 // ============================================================================
+const USD_TO_INR = 90; // update to the current exchange rate
+const inr = (usd, digits = 0) =>
+  '₹' + (usd * USD_TO_INR).toLocaleString('en-IN', { minimumFractionDigits: digits, maximumFractionDigits: digits });
+
 const CELL_LIBRARY = {
   'Samsung 35E': {
     id: 'Samsung 35E',
@@ -1119,12 +1123,12 @@ React.useEffect(() => {
    Mass & Volume:      ${totalMassEst.toFixed(2)} kg | ${packVolumeLiters.toFixed(2)} L (${lengthMm}×${widthMm}×${heightMm} mm)
    Thermal @ 1C:       ${tempAtStated1C.toFixed(1)} °C (R_th = ${rTh.toFixed(3)} K/W, tau = ${Math.round(tauSec)} s, Q_1C = ${currentEval.qGen1C.toFixed(1)} W)
    Fast-Charge Time:   ${chargeTimeMinutes} mins (10–90% CC-CV @ max ${cell.maxChargeA}A/cell)
-   Pack BOM Cost:      $${totalCostEst.toFixed(0)} ($${packCostPerKWh.toFixed(0)}/kWh) | CapEx Throughput: $${lcos.toFixed(3)}/kWh | Full LCOS: $${fullLcosPerKWh.toFixed(3)}/kWh
+   Pack BOM Cost:      $${totalCostEst.toFixed(0)} (${inr(totalCostEst)}) ($${packCostPerKWh.toFixed(0)}/kWh = ${inr(packCostPerKWh)}/kWh) | CapEx Throughput: $${lcos.toFixed(3)}/kWh | Full LCOS: $${fullLcosPerKWh.toFixed(3)}/kWh
 
 4. SIDE-BY-SIDE COMPARISON SUMMARY (AT STATED 1C REFERENCE)
-   - Baseline: ${evalBaseline.seriesCount}S${evalBaseline.parallelCount}P ${evalBaseline.design.cellChemistry} | ${Math.round(evalBaseline.usableEnergyAt1CWh)} Wh | ${evalBaseline.tempAtStated1C.toFixed(1)}°C | ${evalBaseline.chargeTimeMinutes} min | ${evalBaseline.totalMassEst.toFixed(1)} kg | $${Math.round(evalBaseline.totalCostEst)}
-   - Option A: ${evalOptionA.seriesCount}S${evalOptionA.parallelCount}P ${evalOptionA.design.cellChemistry} | ${Math.round(evalOptionA.usableEnergyAt1CWh)} Wh | ${evalOptionA.tempAtStated1C.toFixed(1)}°C | ${evalOptionA.chargeTimeMinutes} min | ${evalOptionA.totalMassEst.toFixed(1)} kg | $${Math.round(evalOptionA.totalCostEst)}
-   - Option B: ${evalOptionB.seriesCount}S${evalOptionB.parallelCount}P ${evalOptionB.design.cellChemistry} | ${Math.round(evalOptionB.usableEnergyAt1CWh)} Wh | ${evalOptionB.tempAtStated1C.toFixed(1)}°C | ${evalOptionB.chargeTimeMinutes} min | ${evalOptionB.totalMassEst.toFixed(1)} kg | $${Math.round(evalOptionB.totalCostEst)}
+   - Baseline: ${evalBaseline.seriesCount}S${evalBaseline.parallelCount}P ${evalBaseline.design.cellChemistry} | ${Math.round(evalBaseline.usableEnergyAt1CWh)} Wh | ${evalBaseline.tempAtStated1C.toFixed(1)}°C | ${evalBaseline.chargeTimeMinutes} min | ${evalBaseline.totalMassEst.toFixed(1)} kg | $${Math.round(evalBaseline.totalCostEst)} (${inr(evalBaseline.totalCostEst)})
+   - Option A: ${evalOptionA.seriesCount}S${evalOptionA.parallelCount}P ${evalOptionA.design.cellChemistry} | ${Math.round(evalOptionA.usableEnergyAt1CWh)} Wh | ${evalOptionA.tempAtStated1C.toFixed(1)}°C | ${evalOptionA.chargeTimeMinutes} min | ${evalOptionA.totalMassEst.toFixed(1)} kg | $${Math.round(evalOptionA.totalCostEst)} (${inr(evalOptionA.totalCostEst)})
+   - Option B: ${evalOptionB.seriesCount}S${evalOptionB.parallelCount}P ${evalOptionB.design.cellChemistry} | ${Math.round(evalOptionB.usableEnergyAt1CWh)} Wh | ${evalOptionB.tempAtStated1C.toFixed(1)}°C | ${evalOptionB.chargeTimeMinutes} min | ${evalOptionB.totalMassEst.toFixed(1)} kg | $${Math.round(evalOptionB.totalCostEst)} (${inr(evalOptionB.totalCostEst)})
 
 5. DESIGN CONTRACT AUDIT & STATED LIMITATIONS
    Contract Status:    ${contracts.criticalCount} Critical Violation(s), ${contracts.warningCount} Warning(s)
@@ -1336,7 +1340,7 @@ React.useEffect(() => {
           <span className="text-slate-600">|</span>
           <span>{totalMassEst.toFixed(1)} kg ({packVolumeLiters.toFixed(1)} L)</span>
           <span className="text-slate-600">|</span>
-          <span>${packCostPerKWh.toFixed(0)}/kWh</span>
+          <span>${packCostPerKWh.toFixed(0)}/kWh ({inr(packCostPerKWh)}/kWh)</span>
           <span className="text-slate-600">|</span>
           <span className={steadyPeakTemp > appProfile.maxTemp1CCelsius ? 'text-rose-400 font-bold' : 'text-slate-200'}>
             {steadyPeakTemp.toFixed(1)} °C peak
@@ -1498,7 +1502,7 @@ React.useEffect(() => {
                       </div>
                       <div className="p-2.5 bg-slate-950 border border-slate-800 rounded">
                         <span className="text-slate-500 block">CapEx / Throughput (D8):</span>
-                        <span className="font-mono text-emerald-400 font-bold">${lcos.toFixed(3)}/kWh (Full LCOS: ${fullLcosPerKWh.toFixed(2)})</span>
+                        <span className="font-mono text-emerald-400 font-bold">${lcos.toFixed(3)}/kWh (Full LCOS: ${fullLcosPerKWh.toFixed(2)}) · {inr(lcos, 2)}/kWh (Full: {inr(fullLcosPerKWh, 2)})</span>
                       </div>
                       <div className="p-2.5 bg-slate-950 border border-slate-800 rounded">
                         <span className="text-slate-500 block">CC-CV Charge (10–90%):</span>
@@ -1656,8 +1660,8 @@ React.useEffect(() => {
                       </div>
                       <div className="bg-slate-950 p-3 rounded border border-slate-800">
                         <p className="text-xs text-slate-500 uppercase">BOM Cost ({costBasis})</p>
-                        <p className="text-base font-mono font-bold text-slate-200">${totalCostEst.toFixed(0)}</p>
-                        <p className="text-[10px] text-slate-500 font-mono">${packCostPerKWh.toFixed(0)}/kWh</p>
+                        <p className="text-base font-mono font-bold text-slate-200">${totalCostEst.toFixed(0)} <span className="text-emerald-400">({inr(totalCostEst)})</span></p>
+                        <p className="text-[10px] text-slate-500 font-mono">${packCostPerKWh.toFixed(0)}/kWh · {inr(packCostPerKWh)}/kWh</p>
                       </div>
                     </div>
                   </div>
@@ -1685,7 +1689,7 @@ React.useEffect(() => {
                       </span>
                     </div>
                     <h3 className="text-base font-bold text-white">
-                      {paretoAnalysis.kneePick.label} — {paretoAnalysis.kneePick.usableWh} Wh Usable · {paretoAnalysis.kneePick.massKg} kg · ${paretoAnalysis.kneePick.costUsd} · {paretoAnalysis.kneePick.tempC}°C Peak
+                      {paretoAnalysis.kneePick.label} — {paretoAnalysis.kneePick.usableWh} Wh Usable · {paretoAnalysis.kneePick.massKg} kg · ${paretoAnalysis.kneePick.costUsd} ({inr(paretoAnalysis.kneePick.costUsd)}) · {paretoAnalysis.kneePick.tempC}°C Peak
                     </h3>
                     <p className="text-xs text-slate-400">
                       Selected from {paretoAnalysis.candidates.length} enumerated designs across 4 chemistries × cooling topologies. Balances mass, thermal safety margin, and BNEF pack cost without violating datasheet current limits.
@@ -1763,17 +1767,17 @@ React.useEffect(() => {
                       </tr>
                       <tr className="hover:bg-slate-800/50">
                         <td className="px-4 py-3 font-sans font-medium text-slate-200">Estimated BOM Cost ({costBasis}) <span className="text-slate-500 block text-[11px]">BNEF 2W/3W ref: $133/kWh</span></td>
-                        <td className="px-4 py-3 text-slate-400">${appProfile.bnefPackCostBandMin}–${appProfile.bnefPackCostBandMax}/kWh</td>
-                        <td className="px-4 py-3">${Math.round(evalBaseline.totalCostEst)} (${Math.round(evalBaseline.packCostPerKWh)}/kWh)</td>
-                        <td className="px-4 py-3">${Math.round(evalOptionA.totalCostEst)} (${Math.round(evalOptionA.packCostPerKWh)}/kWh)</td>
-                        <td className="px-4 py-3">${Math.round(evalOptionB.totalCostEst)} (${Math.round(evalOptionB.packCostPerKWh)}/kWh)</td>
+                        <td className="px-4 py-3 text-slate-400">${appProfile.bnefPackCostBandMin}–${appProfile.bnefPackCostBandMax}/kWh <span className="text-slate-500 block">{inr(appProfile.bnefPackCostBandMin)}–{inr(appProfile.bnefPackCostBandMax)}/kWh</span></td>
+                        <td className="px-4 py-3">${Math.round(evalBaseline.totalCostEst)} (${Math.round(evalBaseline.packCostPerKWh)}/kWh) <span className="text-emerald-400 block">{inr(evalBaseline.totalCostEst)} ({inr(evalBaseline.packCostPerKWh)}/kWh)</span></td>
+                        <td className="px-4 py-3">${Math.round(evalOptionA.totalCostEst)} (${Math.round(evalOptionA.packCostPerKWh)}/kWh) <span className="text-emerald-400 block">{inr(evalOptionA.totalCostEst)} ({inr(evalOptionA.packCostPerKWh)}/kWh)</span></td>
+                        <td className="px-4 py-3">${Math.round(evalOptionB.totalCostEst)} (${Math.round(evalOptionB.packCostPerKWh)}/kWh) <span className="text-emerald-400 block">{inr(evalOptionB.totalCostEst)} ({inr(evalOptionB.packCostPerKWh)}/kWh)</span></td>
                       </tr>
                       <tr className="hover:bg-slate-800/50">
                         <td className="px-4 py-3 font-sans font-medium text-slate-200">Cycle Life (80% SOH) & Throughput Cost <span className="text-slate-500 block text-[11px]">Temperature-adjusted cycle degradation</span></td>
                         <td className="px-4 py-3 text-slate-400">≥ 600 cycles</td>
-                        <td className="px-4 py-3">{evalBaseline.effectiveCycles} cyc · ${evalBaseline.lcos.toFixed(3)}/kWh</td>
-                        <td className="px-4 py-3">{evalOptionA.effectiveCycles} cyc · ${evalOptionA.lcos.toFixed(3)}/kWh</td>
-                        <td className="px-4 py-3 text-emerald-400 font-bold">{evalOptionB.effectiveCycles} cyc · ${evalOptionB.lcos.toFixed(3)}/kWh</td>
+                        <td className="px-4 py-3">{evalBaseline.effectiveCycles} cyc · ${evalBaseline.lcos.toFixed(3)}/kWh <span className="text-emerald-400 block">{inr(evalBaseline.lcos, 2)}/kWh</span></td>
+                        <td className="px-4 py-3">{evalOptionA.effectiveCycles} cyc · ${evalOptionA.lcos.toFixed(3)}/kWh <span className="text-emerald-400 block">{inr(evalOptionA.lcos, 2)}/kWh</span></td>
+                        <td className="px-4 py-3 text-emerald-400 font-bold">{evalOptionB.effectiveCycles} cyc · ${evalOptionB.lcos.toFixed(3)}/kWh <span className="text-emerald-400 block">{inr(evalOptionB.lcos, 2)}/kWh</span></td>
                       </tr>
                       <tr className="hover:bg-slate-800/50">
                         <td className="px-4 py-3 font-sans font-medium text-slate-200">Design Contract Violations <span className="text-slate-500 block text-[11px]">Datasheet SOA & AIS-156 checks</span></td>
@@ -2087,7 +2091,7 @@ React.useEffect(() => {
                         </div>
                         <div>
                           <span className="text-slate-500 block font-sans">Swap Fleet Energy Cost/km:</span>
-                          <strong className="text-cyan-400">${((fullLcosPerKWh * 28) / 1000).toFixed(4)} / km</strong>
+                          <strong className="text-cyan-400">${((fullLcosPerKWh * 28) / 1000).toFixed(4)} / km ({inr((fullLcosPerKWh * 28) / 1000, 2)} / km)</strong>
                         </div>
                         <div>
                           <span className="text-slate-500 block font-sans">Cell OCV Curve Model:</span>
@@ -2225,7 +2229,7 @@ React.useEffect(() => {
                           <td className="px-4 py-2.5">{c.irAcMohm}mΩ AC / <strong className="text-cyan-300">{c.irDcMohm}mΩ DC</strong></td>
                           <td className="px-4 py-2.5">{c.maxContDischargeA}A dchg / {c.maxChargeA}A chg</td>
                           <td className="px-4 py-2.5">{(c.mass * 1000).toFixed(0)}g ({c.diameterMm}×{c.heightMm}mm)</td>
-                          <td className="px-4 py-2.5">${c.costVolume.toFixed(2)} vol / ${c.costRetail.toFixed(2)} ret</td>
+                          <td className="px-4 py-2.5">${c.costVolume.toFixed(2)} vol / ${c.costRetail.toFixed(2)} ret <span className="text-emerald-400 block">{inr(c.costVolume)} vol / {inr(c.costRetail)} ret</span></td>
                           <td className="px-4 py-2.5 font-sans text-slate-400">{c.provenance}</td>
                         </tr>
                       ))}
@@ -2246,16 +2250,16 @@ React.useEffect(() => {
                   </div>
                   
 <ul className="space-y-2 text-xs text-slate-400">
-  <li className="flex justify-between"><span>Pack BOM Cost ({costBasis} basis):</span> <strong className="text-slate-200 font-mono">${totalCostEst.toFixed(2)} (${packCostPerKWh.toFixed(0)}/kWh)</strong></li>
+  <li className="flex justify-between"><span>Pack BOM Cost ({costBasis} basis):</span> <strong className="text-slate-200 font-mono">${totalCostEst.toFixed(2)} (${packCostPerKWh.toFixed(0)}/kWh) · {inr(totalCostEst)} ({inr(packCostPerKWh)}/kWh)</strong></li>
   <li className="flex justify-between"><span>Usable Energy @ 1C ({(currentEval.bms.dodWindow*100).toFixed(0)}% DoD):</span> <strong className="text-slate-200 font-mono">{(usableEnergyAt1CWh / 1000).toFixed(3)} kWh</strong></li>
   <li className="flex justify-between"><span>Temp-Adjusted Cycle Life (to 80% SOH):</span> <strong className="text-slate-200 font-mono">{effectiveCycles} cycles</strong></li>
   <li className="flex justify-between border-t border-slate-800 pt-2">
     <span className="text-cyan-400">CapEx per kWh Throughput:</span>
-    <strong className="text-cyan-400 font-mono text-sm">${lcos.toFixed(4)} / kWh</strong>
+    <strong className="text-cyan-400 font-mono text-sm">${lcos.toFixed(4)} / kWh · {inr(lcos, 2)} / kWh</strong>
   </li>
   <li className="flex justify-between">
     <span className="text-emerald-400">Full Levelized Cost (incl. Electricity & O&M):</span>
-    <strong className="text-emerald-400 font-mono text-sm">${fullLcosPerKWh.toFixed(4)} / kWh</strong>
+    <strong className="text-emerald-400 font-mono text-sm">${fullLcosPerKWh.toFixed(4)} / kWh · {inr(fullLcosPerKWh, 2)} / kWh</strong>
   </li>
 </ul>
                 </div>
