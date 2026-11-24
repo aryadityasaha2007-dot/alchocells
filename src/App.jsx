@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import {
   Settings, BarChart2, Activity, FileText, Download,
-  Cpu, Battery, ShieldCheck, CheckCircle2, Zap, PlayCircle, DollarSign,
+  Cpu, Battery, ShieldCheck, CheckCircle2, Zap, PlayCircle, DollarSign, IndianRupee,
   AlertTriangle, Info, Layers, Compass, Sliders, Check, X
 } from 'lucide-react';
 import {
@@ -14,8 +14,11 @@ import {
 // 1. RECONCILED DATASHEET LIBRARY WITH PROVENANCE (Fixes D9, D12, C5)
 // ============================================================================
 const USD_TO_INR = 93; // update to the current exchange rate
-const inr = (usd, digits = 0) =>
-  '₹' + (usd * USD_TO_INR).toLocaleString('en-IN', { minimumFractionDigits: digits, maximumFractionDigits: digits });
+// Formats a USD amount in the chosen currency. usdDigits = decimals for $, inrDigits = decimals for ₹.
+const fmtMoney = (usd, currency = 'INR', usdDigits = 0, inrDigits = usdDigits) =>
+  currency === 'INR'
+    ? '₹' + (usd * USD_TO_INR).toLocaleString('en-IN', { minimumFractionDigits: inrDigits, maximumFractionDigits: inrDigits })
+    : '$' + usd.toLocaleString('en-US', { minimumFractionDigits: usdDigits, maximumFractionDigits: usdDigits });
 
 const CELL_LIBRARY = {
   'Samsung 35E': {
@@ -440,7 +443,8 @@ function interpolateCellOcv(family, socPct) {
 function evaluatePack(design, conditions, options = {}) {
   const {
     modelMode = 'physics', // 'physics' | 'legacy'
-    costBasis = 'volume'   // 'volume' | 'retail'
+    costBasis = 'volume',  // 'volume' | 'retail'
+    currency = 'INR'       // 'INR' | 'USD' (display only)
   } = options;
 
   const appProfile = APPLICATION_PROFILES[design.application] || APPLICATION_PROFILES['Swappable 48V E-Scooter Module'];
@@ -591,7 +595,7 @@ function evaluatePack(design, conditions, options = {}) {
   const contracts = evaluateDesignContracts({
     design, conditions, appProfile, cell, busbar, cooling, spacing, bms,
     seriesCount, parallelCount, totalCells, packVoltage, usableEnergyAt1CWh,
-    cellCurrentA, steadyPeakTemp, tempAtStated1C, packCostPerKWh, chargeTimeMinutes, totalMassEst
+    cellCurrentA, steadyPeakTemp, tempAtStated1C, packCostPerKWh, chargeTimeMinutes, totalMassEst, currency
   });
 
   // Transparent, Mathematically Defined 0-100 Normalized Scores for Radar (Fixes Radar Arbitrary Score Critique)
@@ -698,7 +702,7 @@ function evaluateDesignContracts(ctx) {
   const {
     design, conditions, appProfile, cell, busbar, spacing, bms,
     totalCells, packVoltage, usableEnergyAt1CWh, cellCurrentA,
-    steadyPeakTemp, tempAtStated1C, packCostPerKWh, chargeTimeMinutes, totalMassEst
+    steadyPeakTemp, tempAtStated1C, packCostPerKWh, chargeTimeMinutes, totalMassEst, currency
   } = ctx;
 
   const rules = [
@@ -769,8 +773,8 @@ function evaluateDesignContracts(ctx) {
       title: 'BNEF 2025 Pack Cost Sanity Band',
       passed: packCostPerKWh >= appProfile.bnefPackCostBandMin * 0.75 && packCostPerKWh <= appProfile.bnefPackCostBandMax * 1.45,
       severity: 'INFO',
-      measured: `$${packCostPerKWh.toFixed(0)} / kWh`,
-      limit: `$${appProfile.bnefPackCostBandMin}–$${appProfile.bnefPackCostBandMax}/kWh (BNEF 2W/3W $133/kWh ref)`,
+      measured: `${fmtMoney(packCostPerKWh, currency)} / kWh`,
+      limit: `${fmtMoney(appProfile.bnefPackCostBandMin, currency)}–${fmtMoney(appProfile.bnefPackCostBandMax, currency)}/kWh (BNEF 2W/3W ${fmtMoney(133, currency)}/kWh ref)`,
       source: 'BloombergNEF 2025 Li-Ion Battery Price Survey',
       fixHint: 'Toggle Cost Basis to "Volume OEM" in the top bar to evaluate mass-production pack economics vs single-unit retail.'
     }
@@ -812,6 +816,9 @@ React.useEffect(() => {
   // Stage 6/7 Policy Controls: Model Mode Switch (Physics-Corrected vs Legacy) & Cost Basis
   const [modelMode, setModelMode] = useState('physics'); // 'physics' | 'legacy'
   const [costBasis, setCostBasis] = useState('volume');  // 'volume' | 'retail'
+  const [currency, setCurrency] = useState('INR');        // 'INR' | 'USD' (display only)
+  const [showLegacyInfo, setShowLegacyInfo] = useState(false);
+  const [showPassing, setShowPassing] = useState(false);
 
   // Active Application & Active Slot ('Baseline Starting Design' | 'Option A...' | 'Option B...')
   const [application, setApplication] = useState('Swappable 48V E-Scooter Module');
@@ -849,7 +856,7 @@ React.useEffect(() => {
   };
 
   // Evaluate all 3 options live using the unified pure model (Fixes D1/C1)
-  const evalOptions = useMemo(() => ({ modelMode, costBasis }), [modelMode, costBasis]);
+  const evalOptions = useMemo(() => ({ modelMode, costBasis, currency }), [modelMode, costBasis, currency]);
 
   const evalBaseline = useMemo(() => evaluatePack(
     { application, designSelection: 'Baseline Starting Design', ...allAppDesigns[application]['Baseline Starting Design'] },
@@ -885,6 +892,45 @@ React.useEffect(() => {
     cellVariationStats, contracts, appProfile, totalCells
   } = currentEval;
 
+  // Money helpers (one currency at a time) and chart cost scaling
+  const money = (usd, usdDigits = 0, inrDigits = usdDigits) => fmtMoney(usd, currency, usdDigits, inrDigits);
+  const currencySymbol = currency === 'INR' ? '₹' : '$';
+  const costChart = (usd) => (currency === 'INR' ? Math.round((usd * USD_TO_INR) / 100) / 10 : Math.round(usd)); // ₹ thousand or $
+
+  // Design-contract rows: failures first, passing rows collapsible
+  const rankRule = (r) => (r.passed ? 3 : r.severity === 'CRITICAL' ? 0 : r.severity === 'WARNING' ? 1 : 2);
+  const failingRules = contracts.rules.filter(r => !r.passed).sort((a, b) => rankRule(a) - rankRule(b));
+  const passingRules = contracts.rules.filter(r => r.passed);
+  const renderRuleRow = (rule) => (
+    <div
+      key={rule.id}
+      title={rule.source}
+      className={`flex flex-col lg:flex-row lg:items-center gap-2 lg:gap-4 px-6 py-3 border-t border-slate-800 text-xs ${
+        !rule.passed && rule.severity === 'CRITICAL' ? 'bg-rose-950/40' : ''
+      }`}
+    >
+      <div className="lg:w-20 shrink-0">
+        <span className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${
+          rule.passed
+            ? 'bg-emerald-950 text-emerald-400 border border-emerald-800'
+            : rule.severity === 'CRITICAL'
+            ? 'bg-rose-600 text-slate-950'
+            : rule.severity === 'WARNING'
+            ? 'bg-amber-500 text-slate-950'
+            : 'bg-slate-700 text-white'
+        }`}>
+          {rule.passed ? 'Pass' : rule.severity === 'CRITICAL' ? 'Critical' : rule.severity === 'WARNING' ? 'Warning' : 'Info'}
+        </span>
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-semibold text-slate-100">{rule.title}</p>
+        {!rule.passed && <p className="text-slate-400 mt-0.5">Fix: {rule.fixHint}</p>}
+      </div>
+      <div className="font-mono text-slate-300 lg:w-72 shrink-0">{rule.measured}</div>
+      <div className="font-mono text-slate-500 lg:w-[26rem] shrink-0 lg:text-right">{rule.limit}</div>
+    </div>
+  );
+
   // Dynamic Radar & Bar data driven live by the 3 configurations (Fixes D1)
   const liveRadarData = useMemo(() => [
     { subject: 'Specific Energy', Baseline: evalBaseline.scores.specificEnergy, OptionA: evalOptionA.scores.specificEnergy, OptionB: evalOptionB.scores.specificEnergy, fullMark: 100 },
@@ -902,7 +948,7 @@ React.useEffect(() => {
       temp: parseFloat(evalBaseline.tempAtStated1C.toFixed(1)),
       time: evalBaseline.chargeTimeMinutes,
       mass: parseFloat(evalBaseline.totalMassEst.toFixed(1)),
-      cost: Math.round(evalBaseline.totalCostEst)
+      cost: costChart(evalBaseline.totalCostEst)
     },
     {
       name: 'Option A',
@@ -910,7 +956,7 @@ React.useEffect(() => {
       temp: parseFloat(evalOptionA.tempAtStated1C.toFixed(1)),
       time: evalOptionA.chargeTimeMinutes,
       mass: parseFloat(evalOptionA.totalMassEst.toFixed(1)),
-      cost: Math.round(evalOptionA.totalCostEst)
+      cost: costChart(evalOptionA.totalCostEst)
     },
     {
       name: 'Option B (LFP)',
@@ -918,7 +964,7 @@ React.useEffect(() => {
       temp: parseFloat(evalOptionB.tempAtStated1C.toFixed(1)),
       time: evalOptionB.chargeTimeMinutes,
       mass: parseFloat(evalOptionB.totalMassEst.toFixed(1)),
-      cost: Math.round(evalOptionB.totalCostEst)
+      cost: costChart(evalOptionB.totalCostEst)
     }
   ], [evalBaseline, evalOptionA, evalOptionB]);
 
@@ -1108,7 +1154,7 @@ React.useEffect(() => {
    Application:        ${config.application} (${appProfile.roleBadge})
    Active Design Slot: ${config.designSelection}
    Physics Engine:     ${modelMode === 'physics' ? 'Physics-Corrected (Size-scaled R_th, tau=R_th*C_th, OCV Table, DCIR)' : 'Legacy Simplified'}
-   Cost Basis:         ${costBasis === 'volume' ? 'OEM Volume Pricing (BNEF $133/kWh 2W/3W benchmark aligned)' : 'Single-Unit Distributor Retail'}
+   Cost Basis:         ${costBasis === 'volume' ? `OEM Volume Pricing (BNEF ${money(133)}/kWh 2W/3W benchmark aligned)` : 'Single-Unit Distributor Retail'}
 
 2. ACTIVE CONFIGURATION (${seriesCount}S ${parallelCount}P — ${totalCells} Cells)
    Cell Chemistry:     ${cell.fullName} (${cell.provenance})
@@ -1123,12 +1169,12 @@ React.useEffect(() => {
    Mass & Volume:      ${totalMassEst.toFixed(2)} kg | ${packVolumeLiters.toFixed(2)} L (${lengthMm}×${widthMm}×${heightMm} mm)
    Thermal @ 1C:       ${tempAtStated1C.toFixed(1)} °C (R_th = ${rTh.toFixed(3)} K/W, tau = ${Math.round(tauSec)} s, Q_1C = ${currentEval.qGen1C.toFixed(1)} W)
    Fast-Charge Time:   ${chargeTimeMinutes} mins (10–90% CC-CV @ max ${cell.maxChargeA}A/cell)
-   Pack BOM Cost:      $${totalCostEst.toFixed(0)} (${inr(totalCostEst)}) ($${packCostPerKWh.toFixed(0)}/kWh = ${inr(packCostPerKWh)}/kWh) | CapEx Throughput: $${lcos.toFixed(3)}/kWh | Full LCOS: $${fullLcosPerKWh.toFixed(3)}/kWh
+   Pack BOM Cost:      ${money(totalCostEst)} (${money(packCostPerKWh)}/kWh) | CapEx Throughput: ${money(lcos, 3, 2)}/kWh | Full LCOS: ${money(fullLcosPerKWh, 3, 2)}/kWh
 
 4. SIDE-BY-SIDE COMPARISON SUMMARY (AT STATED 1C REFERENCE)
-   - Baseline: ${evalBaseline.seriesCount}S${evalBaseline.parallelCount}P ${evalBaseline.design.cellChemistry} | ${Math.round(evalBaseline.usableEnergyAt1CWh)} Wh | ${evalBaseline.tempAtStated1C.toFixed(1)}°C | ${evalBaseline.chargeTimeMinutes} min | ${evalBaseline.totalMassEst.toFixed(1)} kg | $${Math.round(evalBaseline.totalCostEst)} (${inr(evalBaseline.totalCostEst)})
-   - Option A: ${evalOptionA.seriesCount}S${evalOptionA.parallelCount}P ${evalOptionA.design.cellChemistry} | ${Math.round(evalOptionA.usableEnergyAt1CWh)} Wh | ${evalOptionA.tempAtStated1C.toFixed(1)}°C | ${evalOptionA.chargeTimeMinutes} min | ${evalOptionA.totalMassEst.toFixed(1)} kg | $${Math.round(evalOptionA.totalCostEst)} (${inr(evalOptionA.totalCostEst)})
-   - Option B: ${evalOptionB.seriesCount}S${evalOptionB.parallelCount}P ${evalOptionB.design.cellChemistry} | ${Math.round(evalOptionB.usableEnergyAt1CWh)} Wh | ${evalOptionB.tempAtStated1C.toFixed(1)}°C | ${evalOptionB.chargeTimeMinutes} min | ${evalOptionB.totalMassEst.toFixed(1)} kg | $${Math.round(evalOptionB.totalCostEst)} (${inr(evalOptionB.totalCostEst)})
+   - Baseline: ${evalBaseline.seriesCount}S${evalBaseline.parallelCount}P ${evalBaseline.design.cellChemistry} | ${Math.round(evalBaseline.usableEnergyAt1CWh)} Wh | ${evalBaseline.tempAtStated1C.toFixed(1)}°C | ${evalBaseline.chargeTimeMinutes} min | ${evalBaseline.totalMassEst.toFixed(1)} kg | ${money(evalBaseline.totalCostEst)}
+   - Option A: ${evalOptionA.seriesCount}S${evalOptionA.parallelCount}P ${evalOptionA.design.cellChemistry} | ${Math.round(evalOptionA.usableEnergyAt1CWh)} Wh | ${evalOptionA.tempAtStated1C.toFixed(1)}°C | ${evalOptionA.chargeTimeMinutes} min | ${evalOptionA.totalMassEst.toFixed(1)} kg | ${money(evalOptionA.totalCostEst)}
+   - Option B: ${evalOptionB.seriesCount}S${evalOptionB.parallelCount}P ${evalOptionB.design.cellChemistry} | ${Math.round(evalOptionB.usableEnergyAt1CWh)} Wh | ${evalOptionB.tempAtStated1C.toFixed(1)}°C | ${evalOptionB.chargeTimeMinutes} min | ${evalOptionB.totalMassEst.toFixed(1)} kg | ${money(evalOptionB.totalCostEst)}
 
 5. DESIGN CONTRACT AUDIT & STATED LIMITATIONS
    Contract Status:    ${contracts.criticalCount} Critical Violation(s), ${contracts.warningCount} Warning(s)
@@ -1287,7 +1333,7 @@ React.useEffect(() => {
             </button>
             <button
               type="button"
-              onClick={() => setModelMode('legacy')}
+              onClick={() => { setModelMode('legacy'); setShowLegacyInfo(true); }}
               className={`px-2.5 py-1 rounded font-semibold transition ${modelMode === 'legacy' ? 'bg-amber-500 text-slate-950' : 'text-slate-400 hover:text-white'}`}
             >
               Legacy
@@ -1311,6 +1357,23 @@ React.useEffect(() => {
               Retail
             </button>
           </div>
+<div className="flex items-center bg-slate-950 p-1 rounded border border-slate-800 text-xs" title={`1 USD = ₹${USD_TO_INR}`}>
+            <span className="text-slate-400 px-2">Currency:</span>
+            <button
+              type="button"
+              onClick={() => setCurrency('INR')}
+              className={`px-2.5 py-1 rounded font-semibold transition ${currency === 'INR' ? 'bg-cyan-600 text-slate-950' : 'text-slate-400 hover:text-white'}`}
+            >
+              ₹ INR
+            </button>
+            <button
+              type="button"
+              onClick={() => setCurrency('USD')}
+              className={`px-2.5 py-1 rounded font-semibold transition ${currency === 'USD' ? 'bg-cyan-600 text-slate-950' : 'text-slate-400 hover:text-white'}`}
+            >
+              $ USD
+            </button>
+          </div>
 <button
   type="button"
   onClick={() => setLightMode(m => !m)}
@@ -1329,44 +1392,8 @@ React.useEffect(() => {
         </div>
       </header>
 
-      {/* PERSISTENT DESIGN-STATE BAR (Stage 5 Redesign Proposal) */}
-      <div className="bg-slate-950 border-b border-slate-800 px-6 py-2 flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
-        <div className="flex flex-wrap items-center gap-3">
-          <span className="text-cyan-400 font-bold">{seriesCount}S{parallelCount}P · {config.cellChemistry}</span>
-          <span className="text-slate-600">|</span>
-          <span>{packVoltage.toFixed(1)} V</span>
-          <span className="text-slate-600">|</span>
-          <span className="text-emerald-400">{(usableEnergyAt1CWh / 1000).toFixed(2)} kWh usable</span>
-          <span className="text-slate-600">|</span>
-          <span>{totalMassEst.toFixed(1)} kg ({packVolumeLiters.toFixed(1)} L)</span>
-          <span className="text-slate-600">|</span>
-          <span>${packCostPerKWh.toFixed(0)}/kWh ({inr(packCostPerKWh)}/kWh)</span>
-          <span className="text-slate-600">|</span>
-          <span className={steadyPeakTemp > appProfile.maxTemp1CCelsius ? 'text-rose-400 font-bold' : 'text-slate-200'}>
-            {steadyPeakTemp.toFixed(1)} °C peak
-          </span>
-          <span className="text-slate-600">|</span>
-          <span>Chg: {chargeTimeMinutes} min</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className={`px-2 py-0.5 rounded border font-sans font-bold ${
-            contracts.criticalCount > 0
-              ? 'bg-rose-950/80 border-rose-700 text-rose-300'
-              : contracts.warningCount > 0
-              ? 'bg-amber-950/80 border-amber-700 text-amber-300'
-              : 'bg-emerald-950/80 border-emerald-700 text-emerald-300'
-          }`}>
-            {contracts.criticalCount > 0
-              ? `✗ ${contracts.criticalCount} CRITICAL CONFLICT`
-              : contracts.warningCount > 0
-              ? `⚠ ${contracts.warningCount} WARNING`
-              : '✓ ALL CONTRACTS PASS'}
-          </span>
-        </div>
-      </div>
-
       {/* TABS NAVIGATION (Accessible role="tablist") */}
-      <div role="tablist" aria-label="Platform Views" className="bg-slate-900 border-b border-slate-800 px-6 flex space-x-1 overflow-x-auto shrink-0">
+      <div role="tablist" aria-label="Platform Views" className="sticky top-0 z-30 bg-slate-900 border-b border-slate-800 px-6 flex space-x-1 overflow-x-auto shrink-0">
         {[
           { id: 'workbench', icon: Settings, label: 'Multi-Domain Workbench' },
           { id: 'tradeoff', icon: BarChart2, label: 'Design Trade-Off Comparison' },
@@ -1411,17 +1438,17 @@ React.useEffect(() => {
                 </div>
                 <div className="flex flex-wrap items-center gap-2 text-xs">
                   {contracts.criticalCount > 0 && (
-                    <span className="px-2.5 py-1 rounded-full border bg-rose-950/60 border-rose-800 text-rose-300 font-semibold">{contracts.criticalCount} critical</span>
+                    <span className="px-2.5 py-1 rounded-full border bg-rose-950/80 border-rose-700 text-rose-300 font-semibold">{contracts.criticalCount} critical</span>
                   )}
                   {contracts.warningCount > 0 && (
-                    <span className="px-2.5 py-1 rounded-full border bg-amber-950/60 border-amber-800 text-amber-300 font-semibold">{contracts.warningCount} warning</span>
+                    <span className="px-2.5 py-1 rounded-full border bg-amber-950/80 border-amber-700 text-amber-300 font-semibold">{contracts.warningCount} warning</span>
                   )}
-                  <span className="text-slate-400 font-mono">{contracts.rules.length - contracts.violations.length} of {contracts.rules.length} rules satisfied</span>
+                  <span className="text-slate-400">{contracts.rules.length - contracts.violations.length} of {contracts.rules.length} rules satisfied</span>
                 </div>
               </div>
 
               {/* KPI STRIP */}
-              <div className="bg-slate-900 rounded-xl border border-slate-800 grid grid-cols-2 md:grid-cols-5 divide-x divide-slate-800">
+              <div className="bg-slate-900 rounded-xl border border-slate-800 shadow-sm grid grid-cols-2 md:grid-cols-5 divide-x divide-slate-800">
                 {[
                   {
                     label: 'Usable energy',
@@ -1449,9 +1476,8 @@ React.useEffect(() => {
                   },
                   {
                     label: 'Pack cost',
-                    value: `$${Math.round(totalCostEst).toLocaleString()}`,
-                    sub: `$${packCostPerKWh.toFixed(0)} / kWh`,
-                    rupee: `${inr(totalCostEst)} · ${inr(packCostPerKWh)} / kWh`,
+                    value: money(totalCostEst),
+                    sub: `${money(packCostPerKWh)} / kWh`,
                     bad: false
                   }
                 ].map(k => (
@@ -1459,7 +1485,6 @@ React.useEffect(() => {
                     <p className="text-xs text-slate-500">{k.label}</p>
                     <p className="text-2xl font-bold text-slate-100 mt-1">{k.value}</p>
                     <p className={`text-xs mt-1 ${k.bad ? 'text-rose-400' : 'text-slate-500'}`}>{k.sub}</p>
-                    {k.rupee && <p className="text-xs mt-0.5 text-emerald-400">{k.rupee}</p>}
                   </div>
                 ))}
               </div>
@@ -1468,7 +1493,7 @@ React.useEffect(() => {
               <div className="grid grid-cols-1 lg:grid-cols-[1.25fr_1fr] gap-6">
 
                 {/* Configuration card */}
-                <div className="bg-slate-900 rounded-xl border border-slate-800 p-6 space-y-5">
+                <div className="bg-slate-900 rounded-xl border border-slate-800 shadow-sm p-6 space-y-5">
                   <p className="text-[11px] uppercase tracking-widest text-slate-500 font-semibold">Configuration</p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
@@ -1558,7 +1583,7 @@ React.useEffect(() => {
                     </div>
                     <div className="p-2.5 bg-slate-950 border border-slate-800 rounded">
                       <span className="text-slate-500 block">CapEx / throughput:</span>
-                      <span className="font-mono text-emerald-400 font-bold">${lcos.toFixed(3)}/kWh (Full LCOS: ${fullLcosPerKWh.toFixed(2)}) · {inr(lcos, 2)}/kWh (Full: {inr(fullLcosPerKWh, 2)})</span>
+                      <span className="font-mono text-emerald-400 font-bold">{money(lcos, 3, 2)}/kWh (Full LCOS: {money(fullLcosPerKWh, 2)})</span>
                     </div>
                     <div className="p-2.5 bg-slate-950 border border-slate-800 rounded">
                       <span className="text-slate-500 block">CC-CV charge (10–90%):</span>
@@ -1568,7 +1593,7 @@ React.useEffect(() => {
                 </div>
 
                 {/* Pack layout card */}
-                <div className="bg-slate-900 rounded-xl border border-slate-800 p-6 flex flex-col">
+                <div className="bg-slate-900 rounded-xl border border-slate-800 shadow-sm p-6 flex flex-col">
                   <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
                     <p className="text-[11px] uppercase tracking-widest text-slate-500 font-semibold">Pack layout</p>
                     <span className="text-[11px] font-mono text-slate-400">{lengthMm} × {widthMm} × {heightMm} mm · {packVolumeLiters.toFixed(1)} L</span>
@@ -1627,46 +1652,25 @@ React.useEffect(() => {
                 </div>
               </div>
 
-              {/* DESIGN CONTRACT CHECKS (failures first) */}
-              <div className="bg-slate-900 rounded-xl border border-slate-800 overflow-hidden">
+              {/* DESIGN CONTRACT CHECKS (failures first, passing rows collapsible) */}
+              <div className="bg-slate-900 rounded-xl border border-slate-800 shadow-sm overflow-hidden">
                 <div className="flex items-center justify-between px-6 py-4">
                   <p className="text-[11px] uppercase tracking-widest text-slate-500 font-semibold">Design contract checks</p>
-                  <span className="text-xs text-slate-500">Needs attention first</span>
+                  <span className="text-xs text-slate-500">{failingRules.length > 0 ? 'Needs attention first' : 'All checks pass'}</span>
                 </div>
-                {[...contracts.rules]
-                  .sort((a, b) => {
-                    const rank = r => (r.passed ? 3 : r.severity === 'CRITICAL' ? 0 : r.severity === 'WARNING' ? 1 : 2);
-                    return rank(a) - rank(b);
-                  })
-                  .map(rule => (
-                    <div
-                      key={rule.id}
-                      title={rule.source}
-                      className={`flex flex-col md:flex-row md:items-center gap-2 md:gap-4 px-6 py-3 border-t border-slate-800 text-xs ${
-                        !rule.passed && rule.severity === 'CRITICAL' ? 'bg-rose-950/30' : ''
-                      }`}
-                    >
-                      <div className="md:w-20 shrink-0">
-                        <span className={`inline-block px-2.5 py-0.5 rounded-full border text-[11px] font-semibold ${
-                          rule.passed
-                            ? 'bg-emerald-950/60 border-emerald-800 text-emerald-400'
-                            : rule.severity === 'CRITICAL'
-                            ? 'bg-rose-950/60 border-rose-800 text-rose-300'
-                            : rule.severity === 'WARNING'
-                            ? 'bg-amber-950/60 border-amber-800 text-amber-300'
-                            : 'bg-slate-800 border-slate-700 text-slate-300'
-                        }`}>
-                          {rule.passed ? 'Pass' : rule.severity === 'CRITICAL' ? 'Critical' : rule.severity === 'WARNING' ? 'Warning' : 'Info'}
-                        </span>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-slate-100">{rule.title}</p>
-                        {!rule.passed && <p className="text-slate-400 mt-0.5">Fix: {rule.fixHint}</p>}
-                      </div>
-                      <div className="font-mono text-slate-300 md:w-64">{rule.measured}</div>
-                      <div className="font-mono text-slate-500 md:w-56 md:text-right">{rule.limit}</div>
-                    </div>
-                  ))}
+                {failingRules.map(renderRuleRow)}
+                {passingRules.length > 0 && (
+                  <button
+                    type="button"
+                    aria-expanded={showPassing}
+                    onClick={() => setShowPassing(s => !s)}
+                    className="w-full flex items-center justify-between px-6 py-3 border-t border-slate-800 text-xs font-semibold text-cyan-400 hover:bg-slate-800/50 transition"
+                  >
+                    <span>{showPassing ? 'Hide' : 'Show'} {passingRules.length} passing check{passingRules.length === 1 ? '' : 's'}</span>
+                    <span aria-hidden="true">{showPassing ? '▲' : '▼'}</span>
+                  </button>
+                )}
+                {showPassing && passingRules.map(renderRuleRow)}
               </div>
             </div>
           )}
@@ -1690,7 +1694,7 @@ React.useEffect(() => {
                       </span>
                     </div>
                     <h3 className="text-base font-bold text-white">
-                      {paretoAnalysis.kneePick.label} — {paretoAnalysis.kneePick.usableWh} Wh Usable · {paretoAnalysis.kneePick.massKg} kg · ${paretoAnalysis.kneePick.costUsd} ({inr(paretoAnalysis.kneePick.costUsd)}) · {paretoAnalysis.kneePick.tempC}°C Peak
+                      {paretoAnalysis.kneePick.label} — {paretoAnalysis.kneePick.usableWh} Wh Usable · {paretoAnalysis.kneePick.massKg} kg · {money(paretoAnalysis.kneePick.costUsd)} · {paretoAnalysis.kneePick.tempC}°C Peak
                     </h3>
                     <p className="text-xs text-slate-400">
                       Selected from {paretoAnalysis.candidates.length} enumerated designs across 4 chemistries × cooling topologies. Balances mass, thermal safety margin, and BNEF pack cost without violating datasheet current limits.
@@ -1707,7 +1711,7 @@ React.useEffect(() => {
               )}
 
               {/* Live Scorecard Table (Fixes D1: Driven 100% by evaluatePack) */}
-              <div className="bg-slate-900 rounded-md border border-slate-800 p-6">
+              <div className="bg-slate-900 rounded-md border border-slate-800 shadow-sm p-6">
                 <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
                   <div>
                     <h2 className="text-lg font-semibold text-slate-100">Live Multi-Option Engineering Scorecard</h2>
@@ -1767,18 +1771,18 @@ React.useEffect(() => {
                         <td className="px-4 py-3">{evalOptionB.totalMassEst.toFixed(1)} kg / {evalOptionB.packVolumeLiters.toFixed(1)} L</td>
                       </tr>
                       <tr className="hover:bg-slate-800/50">
-                        <td className="px-4 py-3 font-sans font-medium text-slate-200">Estimated BOM Cost ({costBasis}) <span className="text-slate-500 block text-[11px]">BNEF 2W/3W ref: $133/kWh</span></td>
-                        <td className="px-4 py-3 text-slate-400">${appProfile.bnefPackCostBandMin}–${appProfile.bnefPackCostBandMax}/kWh <span className="text-slate-500 block">{inr(appProfile.bnefPackCostBandMin)}–{inr(appProfile.bnefPackCostBandMax)}/kWh</span></td>
-                        <td className="px-4 py-3">${Math.round(evalBaseline.totalCostEst)} (${Math.round(evalBaseline.packCostPerKWh)}/kWh) <span className="text-emerald-400 block">{inr(evalBaseline.totalCostEst)} ({inr(evalBaseline.packCostPerKWh)}/kWh)</span></td>
-                        <td className="px-4 py-3">${Math.round(evalOptionA.totalCostEst)} (${Math.round(evalOptionA.packCostPerKWh)}/kWh) <span className="text-emerald-400 block">{inr(evalOptionA.totalCostEst)} ({inr(evalOptionA.packCostPerKWh)}/kWh)</span></td>
-                        <td className="px-4 py-3">${Math.round(evalOptionB.totalCostEst)} (${Math.round(evalOptionB.packCostPerKWh)}/kWh) <span className="text-emerald-400 block">{inr(evalOptionB.totalCostEst)} ({inr(evalOptionB.packCostPerKWh)}/kWh)</span></td>
+                        <td className="px-4 py-3 font-sans font-medium text-slate-200">Estimated BOM Cost ({costBasis}) <span className="text-slate-500 block text-[11px]">BNEF 2W/3W ref: {money(133)}/kWh</span></td>
+                        <td className="px-4 py-3 text-slate-400">{money(appProfile.bnefPackCostBandMin)}–{money(appProfile.bnefPackCostBandMax)}/kWh</td>
+                        <td className="px-4 py-3">{money(evalBaseline.totalCostEst)} ({money(evalBaseline.packCostPerKWh)}/kWh)</td>
+                        <td className="px-4 py-3">{money(evalOptionA.totalCostEst)} ({money(evalOptionA.packCostPerKWh)}/kWh)</td>
+                        <td className="px-4 py-3">{money(evalOptionB.totalCostEst)} ({money(evalOptionB.packCostPerKWh)}/kWh)</td>
                       </tr>
                       <tr className="hover:bg-slate-800/50">
                         <td className="px-4 py-3 font-sans font-medium text-slate-200">Cycle Life (80% SOH) & Throughput Cost <span className="text-slate-500 block text-[11px]">Temperature-adjusted cycle degradation</span></td>
                         <td className="px-4 py-3 text-slate-400">≥ 600 cycles</td>
-                        <td className="px-4 py-3">{evalBaseline.effectiveCycles} cyc · ${evalBaseline.lcos.toFixed(3)}/kWh <span className="text-emerald-400 block">{inr(evalBaseline.lcos, 2)}/kWh</span></td>
-                        <td className="px-4 py-3">{evalOptionA.effectiveCycles} cyc · ${evalOptionA.lcos.toFixed(3)}/kWh <span className="text-emerald-400 block">{inr(evalOptionA.lcos, 2)}/kWh</span></td>
-                        <td className="px-4 py-3 text-emerald-400 font-bold">{evalOptionB.effectiveCycles} cyc · ${evalOptionB.lcos.toFixed(3)}/kWh <span className="text-emerald-400 block">{inr(evalOptionB.lcos, 2)}/kWh</span></td>
+                        <td className="px-4 py-3">{evalBaseline.effectiveCycles} cyc · {money(evalBaseline.lcos, 3, 2)}/kWh</td>
+                        <td className="px-4 py-3">{evalOptionA.effectiveCycles} cyc · {money(evalOptionA.lcos, 3, 2)}/kWh</td>
+                        <td className="px-4 py-3 text-emerald-400 font-bold">{evalOptionB.effectiveCycles} cyc · {money(evalOptionB.lcos, 3, 2)}/kWh</td>
                       </tr>
                       <tr className="hover:bg-slate-800/50">
                         <td className="px-4 py-3 font-sans font-medium text-slate-200">Design Contract Violations <span className="text-slate-500 block text-[11px]">Datasheet SOA & AIS-156 checks</span></td>
@@ -1794,7 +1798,7 @@ React.useEffect(() => {
 
               {/* Row 1 Charts: Pareto Scatter Explorer + Sensitivity Tornado */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="bg-slate-900 rounded-md border border-slate-800 p-6">
+                <div className="bg-slate-900 rounded-md border border-slate-800 shadow-sm p-6">
                   <h2 className="text-base font-semibold text-slate-100 mb-1">Pareto Design-Space Explorer (Usable Wh vs Mass kg)</h2>
                   <p className="text-xs text-slate-400 mb-3">Enumerates candidate packs across chemistries & cooling; green points meet all SOA/thermal requirements</p>
                   <div className="h-72 w-full">
@@ -1803,11 +1807,11 @@ React.useEffect(() => {
                         <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
                         <XAxis type="number" dataKey="massKg" name="Mass" unit=" kg" tick={{ fill: '#94a3b8', fontSize: 11 }} />
                         <YAxis type="number" dataKey="usableWh" name="Usable Energy" unit=" Wh" tick={{ fill: '#94a3b8', fontSize: 11 }} />
-                        <ZAxis type="number" dataKey="costUsd" range={[45, 180]} name="BOM Cost ($)" />
+                        <ZAxis type="number" dataKey="costUsd" range={[45, 180]} name="BOM Cost" />
                         <Tooltip
                           cursor={{ strokeDasharray: '3 3' }}
                           contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #334155', color: '#f8fafc', fontSize: '12px' }}
-                          formatter={(val, name) => [val, name]}
+                          formatter={(val, name) => (name === 'BOM Cost' ? [money(val), name] : [val, name])}
                         />
                         <Legend wrapperStyle={{ fontSize: '12px', color: '#cbd5e1' }} />
                         <Scatter name="Pareto Feasible Frontier" data={paretoAnalysis.candidates.filter(c => c.isFeasible)} fill="#10b981" />
@@ -1817,7 +1821,7 @@ React.useEffect(() => {
                   </div>
                 </div>
 
-                <div className="bg-slate-900 rounded-md border border-slate-800 p-6">
+                <div className="bg-slate-900 rounded-md border border-slate-800 shadow-sm p-6">
                   <h2 className="text-base font-semibold text-slate-100 mb-1">Sensitivity Tornado: What Moves Peak Temp (°C) Most?</h2>
                   <p className="text-xs text-slate-400 mb-3">Temperature swing (Δ°C) around active design ({steadyPeakTemp.toFixed(1)}°C) per parameter perturbation</p>
                   <div className="h-72 w-full">
@@ -1839,9 +1843,9 @@ React.useEffect(() => {
 
               {/* Row 2 Charts: Absolute Metric Comparison (Energy, Temp, Time, Cost) + Normalized Radar */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="bg-slate-900 rounded-md border border-slate-800 p-6">
+                <div className="bg-slate-900 rounded-md border border-slate-800 shadow-sm p-6">
                   <h2 className="text-base font-semibold text-slate-100 mb-1 text-center">Live Absolute Metric Comparison</h2>
-                  <p className="text-xs text-slate-400 mb-3 text-center">Usable Energy (Wh), Cost ($), Peak Temp (°C), and Charge Time (min)</p>
+                  <p className="text-xs text-slate-400 mb-3 text-center">Usable Energy (Wh), Cost ({currency === 'INR' ? '₹ thousand' : '$'}), Peak Temp (°C), and Charge Time (min)</p>
                   <div className="h-72 w-full">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={liveBarData} margin={{ top: 15, right: 25, left: 0, bottom: 5 }}>
@@ -1852,7 +1856,7 @@ React.useEffect(() => {
                         <Tooltip contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #334155', color: '#f8fafc' }} cursor={{ fill: '#1e293b' }} />
                         <Legend wrapperStyle={{ fontSize: '11px', color: '#cbd5e1' }}/>
                         <Bar yAxisId="left" dataKey="energy" name="Usable Energy (Wh)" fill="#0ea5e9" radius={[4,4,0,0]} />
-                        <Bar yAxisId="left" dataKey="cost" name="BOM Cost ($)" fill="#10b981" radius={[4,4,0,0]} />
+                        <Bar yAxisId={currency === 'INR' ? 'right' : 'left'} dataKey="cost" name={currency === 'INR' ? 'BOM Cost (₹ thousand)' : 'BOM Cost ($)'} fill="#10b981" radius={[4,4,0,0]} />
                         <Bar yAxisId="right" dataKey="temp" name="Peak Temp (°C)" fill="#f43f5e" radius={[4,4,0,0]} />
                         <Bar yAxisId="right" dataKey="time" name="Charge Time (min)" fill="#f59e0b" radius={[4,4,0,0]} />
                       </BarChart>
@@ -1860,9 +1864,9 @@ React.useEffect(() => {
                   </div>
                 </div>
 
-                <div className="bg-slate-900 rounded-md border border-slate-800 p-6">
+                <div className="bg-slate-900 rounded-md border border-slate-800 shadow-sm p-6">
                   <h2 className="text-base font-semibold text-slate-100 mb-1 text-center">Normalized Multi-Axis Radar (Defined 0–100 Scales)</h2>
-                  <p className="text-xs text-slate-400 mb-3 text-center">100 = 180 Wh/kg, 25°C, 12C rating, $70/kWh, 3500 cycles</p>
+                  <p className="text-xs text-slate-400 mb-3 text-center">100 = 180 Wh/kg, 25°C, 12C rating, {money(70)}/kWh, 3500 cycles</p>
                   <div className="h-72 w-full">
                     <ResponsiveContainer width="100%" height="100%">
                       <RadarChart cx="50%" cy="50%" outerRadius="70%" data={liveRadarData}>
@@ -1890,7 +1894,7 @@ React.useEffect(() => {
               <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
 
                 {/* Inputs & Controls (Span 4) */}
-                <div className="md:col-span-4 bg-slate-900 rounded-md border border-slate-800 p-6 flex flex-col h-full">
+                <div className="md:col-span-4 bg-slate-900 rounded-md border border-slate-800 shadow-sm p-6 flex flex-col h-full">
                   <h2 className="text-lg font-semibold text-slate-100 mb-4 border-b border-slate-800 pb-2">Simulation Parameters</h2>
                   <div className="space-y-4 flex-1">
 
@@ -2013,7 +2017,7 @@ React.useEffect(() => {
                 </div>
 
                 {/* Simulation Outputs (Span 8) */}
-                <div className="md:col-span-8 bg-slate-900 rounded-md border border-slate-800 p-6 flex flex-col">
+                <div className="md:col-span-8 bg-slate-900 rounded-md border border-slate-800 shadow-sm p-6 flex flex-col">
                   <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-3 mb-4">
                     <h2 className="text-lg font-semibold text-slate-100 flex items-center">
                       <Zap className="w-5 h-5 mr-2 text-yellow-500"/>
@@ -2092,7 +2096,7 @@ React.useEffect(() => {
                         </div>
                         <div>
                           <span className="text-slate-500 block font-sans">Swap Fleet Energy Cost/km:</span>
-                          <strong className="text-cyan-400">${((fullLcosPerKWh * 28) / 1000).toFixed(4)} / km ({inr((fullLcosPerKWh * 28) / 1000, 2)} / km)</strong>
+                          <strong className="text-cyan-400">{money((fullLcosPerKWh * 28) / 1000, 4, 2)} / km</strong>
                         </div>
                         <div>
                           <span className="text-slate-500 block font-sans">Cell OCV Curve Model:</span>
@@ -2113,7 +2117,7 @@ React.useEffect(() => {
             <div className="space-y-6">
 
               {/* Expanded 6-Row Application-Driven Requirement Validation Matrix (Fixes D5, D6, C4) */}
-              <div className="bg-slate-900 rounded-md border border-slate-800 overflow-hidden">
+              <div className="bg-slate-900 rounded-md border border-slate-800 shadow-sm overflow-hidden">
                 <div className="px-6 py-4 border-b border-slate-800 bg-slate-800/50 flex flex-wrap justify-between items-center gap-2">
                   <div>
                     <h2 className="text-lg font-semibold text-slate-100">Application Requirement & Traceability Matrix</h2>
@@ -2205,7 +2209,7 @@ React.useEffect(() => {
               </div>
 
               {/* Reconciled Manufacturer Cell Datasheet Table (Fixes "Tab is titled Datasheets but shows none") */}
-              <div className="bg-slate-900 rounded-md border border-slate-800 overflow-hidden">
+              <div className="bg-slate-900 rounded-md border border-slate-800 shadow-sm overflow-hidden">
                 <div className="px-6 py-4 border-b border-slate-800 bg-slate-800/50">
                   <h2 className="text-base font-semibold text-slate-100">Reconciled Cell Datasheet Register & Provenance (Stage 3 Audit)</h2>
                 </div>
@@ -2218,7 +2222,7 @@ React.useEffect(() => {
                         <th className="px-4 py-2.5">AC IR (1kHz) vs DCIR</th>
                         <th className="px-4 py-2.5">Cont. Discharge / Max Chg</th>
                         <th className="px-4 py-2.5">Mass & Dimensions</th>
-                        <th className="px-4 py-2.5">Volume vs Retail ($)</th>
+                        <th className="px-4 py-2.5">Volume vs Retail ({currencySymbol})</th>
                         <th className="px-4 py-2.5">Datasheet Provenance & Test Basis</th>
                       </tr>
                     </thead>
@@ -2230,7 +2234,7 @@ React.useEffect(() => {
                           <td className="px-4 py-2.5">{c.irAcMohm}mΩ AC / <strong className="text-cyan-300">{c.irDcMohm}mΩ DC</strong></td>
                           <td className="px-4 py-2.5">{c.maxContDischargeA}A dchg / {c.maxChargeA}A chg</td>
                           <td className="px-4 py-2.5">{(c.mass * 1000).toFixed(0)}g ({c.diameterMm}×{c.heightMm}mm)</td>
-                          <td className="px-4 py-2.5">${c.costVolume.toFixed(2)} vol / ${c.costRetail.toFixed(2)} ret <span className="text-emerald-400 block">{inr(c.costVolume)} vol / {inr(c.costRetail)} ret</span></td>
+                          <td className="px-4 py-2.5">{money(c.costVolume, 2, 0)} vol / {money(c.costRetail, 2, 0)} ret</td>
                           <td className="px-4 py-2.5 font-sans text-slate-400">{c.provenance}</td>
                         </tr>
                       ))}
@@ -2241,31 +2245,31 @@ React.useEffect(() => {
 
               {/* Economics, Governing Physics, Assumptions Register & Low-Voltage Lab Protocol */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="bg-slate-900 rounded-md border border-slate-800 p-6 space-y-4">
+                <div className="bg-slate-900 rounded-md border border-slate-800 shadow-sm p-6 space-y-4">
                   <h2 className="text-base font-semibold text-slate-100 flex items-center border-b border-slate-800 pb-2">
-                    <DollarSign className="w-5 h-5 mr-2 text-emerald-500"/> Throughput Cost & Full LCOS Breakdown (Fixes D8, D12)
+                    {currency === 'INR' ? <IndianRupee className="w-5 h-5 mr-2 text-emerald-500"/> : <DollarSign className="w-5 h-5 mr-2 text-emerald-500"/>} Throughput Cost & Full LCOS Breakdown (Fixes D8, D12)
                   </h2>
                   <div className="bg-slate-950 p-3.5 rounded border border-slate-800 text-xs text-slate-300 font-mono space-y-1">
                     <div>CapEx_throughput = BOM_Cost / (E_usable_1C × Cycles_eff × η_disch)</div>
-                    <div>Full_LCOS = (BOM_Cost × 1.08_O&M) / Throughput_kWh + ($0.09_tariff / 0.90_RTE)</div>
+                    <div>Full_LCOS = (BOM_Cost × 1.08_O&M) / Throughput_kWh + ({money(0.09, 2, 1)}_tariff / 0.90_RTE)</div>
                   </div>
                   
 <ul className="space-y-2 text-xs text-slate-400">
-  <li className="flex justify-between"><span>Pack BOM Cost ({costBasis} basis):</span> <strong className="text-slate-200 font-mono">${totalCostEst.toFixed(2)} (${packCostPerKWh.toFixed(0)}/kWh) · {inr(totalCostEst)} ({inr(packCostPerKWh)}/kWh)</strong></li>
+  <li className="flex justify-between"><span>Pack BOM Cost ({costBasis} basis):</span> <strong className="text-slate-200 font-mono">{money(totalCostEst, 2, 0)} ({money(packCostPerKWh)}/kWh)</strong></li>
   <li className="flex justify-between"><span>Usable Energy @ 1C ({(currentEval.bms.dodWindow*100).toFixed(0)}% DoD):</span> <strong className="text-slate-200 font-mono">{(usableEnergyAt1CWh / 1000).toFixed(3)} kWh</strong></li>
   <li className="flex justify-between"><span>Temp-Adjusted Cycle Life (to 80% SOH):</span> <strong className="text-slate-200 font-mono">{effectiveCycles} cycles</strong></li>
   <li className="flex justify-between border-t border-slate-800 pt-2">
     <span className="text-cyan-400">CapEx per kWh Throughput:</span>
-    <strong className="text-cyan-400 font-mono text-sm">${lcos.toFixed(4)} / kWh · {inr(lcos, 2)} / kWh</strong>
+    <strong className="text-cyan-400 font-mono text-sm">{money(lcos, 4, 2)} / kWh</strong>
   </li>
   <li className="flex justify-between">
     <span className="text-emerald-400">Full Levelized Cost (incl. Electricity & O&M):</span>
-    <strong className="text-emerald-400 font-mono text-sm">${fullLcosPerKWh.toFixed(4)} / kWh · {inr(fullLcosPerKWh, 2)} / kWh</strong>
+    <strong className="text-emerald-400 font-mono text-sm">{money(fullLcosPerKWh, 4, 2)} / kWh</strong>
   </li>
 </ul>
                 </div>
 
-                <div className="bg-slate-900 rounded-md border border-slate-800 p-6 space-y-4">
+                <div className="bg-slate-900 rounded-md border border-slate-800 shadow-sm p-6 space-y-4">
                   <h2 className="text-base font-semibold text-slate-100 border-b border-slate-800 pb-2">
                     Assumptions Register, Limitations & Safe Bench Protocol (C6 / H3)
                   </h2>
@@ -2280,6 +2284,60 @@ React.useEffect(() => {
           )}
         </div>
       </main>
+
+      {/* FOOTER */}
+      <footer className="px-6 py-4 text-center text-[11px] text-slate-500 border-t border-slate-800">
+        Estimates from a simplified model; not a substitute for AIS-156 testing.
+        {currency === 'INR' ? ` Costs converted at ₹${USD_TO_INR} per US$.` : ''}
+      </footer>
+
+      {/* LEGACY MODE INFO POP-UP */}
+      {showLegacyInfo && (
+        <div
+          className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={() => setShowLegacyInfo(false)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="legacy-title"
+            onClick={(e) => e.stopPropagation()}
+            className="bg-slate-900 border border-slate-700 rounded-lg max-w-lg w-full p-6 space-y-4 shadow-2xl"
+          >
+            <div>
+              <span className="px-2 py-0.5 rounded bg-amber-500 text-slate-950 text-[11px] font-bold uppercase">Legacy mode</span>
+              <h3 id="legacy-title" className="text-lg font-bold text-slate-100 mt-2">Quick, simplified estimates</h3>
+            </div>
+            <p className="text-sm text-slate-300">
+              Legacy mode is ideal for fast first-pass sizing, and for comparing against the Physics-Corrected results to see how much the detailed model changes the answer.
+            </p>
+            <ul className="text-xs text-slate-400 space-y-1.5 list-disc pl-5">
+              <li>Heat flow uses one fixed value per cooling type, not the pack's size.</li>
+              <li>Usable energy equals the full nominal energy (no depth-of-discharge window, voltage sag or cut-off loss).</li>
+              <li>Mass = cells × 1.35. Cost = retail cell prices plus a flat {money(150)}.</li>
+            </ul>
+            <p className="text-xs font-semibold text-slate-200">
+              Numbers are usually optimistic. Use Physics-Corrected for final design decisions.
+            </p>
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => { setModelMode('physics'); setShowLegacyInfo(false); }}
+                className="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs text-slate-300"
+              >
+                Switch back to Physics-Corrected
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowLegacyInfo(false)}
+                className="px-3 py-1.5 rounded bg-cyan-600 hover:bg-cyan-500 text-slate-950 text-xs font-bold"
+              >
+                Got it
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* STRUCTURED REPORT & JSON EXPORT MODAL */}
       {showReportModal && (
