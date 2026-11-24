@@ -13,7 +13,7 @@ import {
 // ============================================================================
 // 1. RECONCILED DATASHEET LIBRARY WITH PROVENANCE (Fixes D9, D12, C5)
 // ============================================================================
-const USD_TO_INR = 90; // update to the current exchange rate
+const USD_TO_INR = 93; // update to the current exchange rate
 const inr = (usd, digits = 0) =>
   '₹' + (usd * USD_TO_INR).toLocaleString('en-IN', { minimumFractionDigits: digits, maximumFractionDigits: digits });
 
