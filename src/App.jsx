@@ -27,8 +27,8 @@ const CELL_LIBRARY = {
     voltage: 3.6,           // V nominal
     vMax: 4.2,              // V charge cutoff
     vMin: 2.65,             // V discharge cutoff
-    irAcMohm: 35.0,         // ≤35 mOhm AC @ 1kHz (Datasheet initial)
-    irDcMohm: 48.0,         // mOhm 10s pulse DCIR (used for I²R heating in Physics-Corrected mode)
+    irAcMohm: 35.0,         // <=35 mOhm AC @ 1kHz (Datasheet initial)
+    irDcMohm: 48.0,         // mOhm 10s pulse DCIR (used for I^2*R heating in Physics-Corrected mode)
     maxContDischargeA: 8.0, // A continuous (13A peak non-continuous)
     maxChargeA: 2.0,        // A max charge (1.7A standard, ~0.57C max)
     mass: 0.050,            // kg (50.0g max per datasheet)
@@ -38,8 +38,8 @@ const CELL_LIBRARY = {
     costVolume: 1.55,       // USD OEM volume pack-aligned price (~$123/kWh cell level)
     cycles: 500,            // cycles to 80% SOH @ 1A chg / 3.4A dchg (conservative datasheet basis)
     cyclesLegacy: 800,
-    cpJkgK: 910,            // J/(kg·K) specific heat capacity
-    provenance: 'Samsung SDI Spec INR18650-35E Rev 1.2 (AC IR ≤ 35mΩ @ 1kHz; Cont. 8A; Max Chg 2.0A; 50g max)'
+    cpJkgK: 910,            // J/(kg*K) specific heat capacity
+    provenance: 'Samsung SDI Spec INR18650-35E Rev 1.2 (AC IR <=35mΩ @ 1kHz; Cont. 8A; Max Chg 2.0A; 50g max)'
   },
   'Molicel P42A': {
     id: 'Molicel P42A',
@@ -96,11 +96,11 @@ const CELL_LIBRARY = {
     voltage: 3.2,
     vMax: 3.65,
     vMin: 2.5,
-    irAcMohm: 0.7,          // ≤0.7 mOhm AC @ 1kHz (Datasheet)
+    irAcMohm: 0.7,          // <=0.7 mOhm AC @ 1kHz (Datasheet)
     irDcMohm: 1.45,         // mOhm DC pulse resistance
     maxContDischargeA: 100.0,// A continuous (2.0C)
     maxChargeA: 50.0,       // A continuous charge (1.0C)
-    mass: 1.395,            // kg (1.395 kg ± 50g per datasheet)
+    mass: 1.395,            // kg (1.395 kg +- 50g per datasheet)
     diameterMm: 36.7,       // thickness mm (Width 148.5mm, Height 128.5mm)
     widthMm: 148.5,
     heightMm: 128.5,
@@ -109,7 +109,7 @@ const CELL_LIBRARY = {
     cycles: 3500,           // cycles @ 25°C 1C/1C 80% DOD
     cyclesLegacy: 4000,
     cpJkgK: 980,
-    provenance: 'EVE Energy LF50K Product Specification Version E (≤0.7mΩ AC; 1395g ±50g; 3500 cycles @ 1C/1C)'
+    provenance: 'EVE Energy LF50K Product Specification Version E (<=0.7mΩ AC; 1395g ±50g; 3500 cycles @ 1C/1C)'
   }
 };
 
@@ -150,37 +150,37 @@ const BUSBAR_SPECS = {
 const COOLING_SPECS = {
   'Passive (Natural Convection)': {
     legacyRth: 3.5,
-    hCoeff: 6.5,            // W/(m²·K) textbook natural convection in enclosed battery bay
+    hCoeff: 6.5,            // W/(m^2*K) textbook natural convection in enclosed battery bay
     massOverheadKg: 0.35,
     volumeMultiplier: 1.12,
     costUsd: 14.0,
     parasiticW: 0,
     isPcm: false,
-    note: 'h = 6.5 W/m²·K (textbook natural convection assumption; no moving parts)'
+    note: 'h = 6.5 W/m²K (textbook natural convection assumption; no moving parts)'
   },
   'Active Air (Forced Fans)': {
     legacyRth: 1.2,
-    hCoeff: 32.0,           // W/(m²·K) forced air ducting across cell holders
+    hCoeff: 32.0,           // W/(m^2*K) forced air ducting across cell holders
     massOverheadKg: 0.85,
     volumeMultiplier: 1.22,
     costUsd: 38.0,
     parasiticW: 9.0,
     isPcm: false,
-    note: 'h = 32 W/m²·K forced convection duct with brushless IP65 blower (9W parasitic)'
+    note: 'h = 32 W/m²K forced convection duct with brushless IP65 blower (9W parasitic)'
   },
   'Liquid Cooling Plate (Bottom)': {
     legacyRth: 0.4,
-    hCoeff: 145.0,          // W/(m²·K) bottom cold-plate + gap pad interface
+    hCoeff: 145.0,          // W/(m^2*K) bottom cold-plate + gap pad interface
     massOverheadKg: 1.65,
     volumeMultiplier: 1.26,
     costUsd: 95.0,
     parasiticW: 18.0,
     isPcm: false,
-    note: 'hₑff = 145 W/m²·K Al micro-channel cold plate with TIM pad (18W pump/chiller)'
+    note: 'h_eff = 145 W/m²K Al micro-channel cold plate with TIM pad (18W pump/chiller)'
   },
   'Phase Change Material (PCM)': {
     legacyRth: 0.15,
-    hCoeff: 18.0,           // W/(m²·K) sensible conduction + latent heat clamping at 44°C
+    hCoeff: 18.0,           // W/(m^2*K) sensible conduction + latent heat clamping at 44°C
     pcmMeltTempC: 44.0,
     pcmLatentJPerCell: 1950,// J latent heat buffer per cell interstitial paraffin matrix
     massOverheadKg: 1.15,
@@ -188,7 +188,7 @@ const COOLING_SPECS = {
     costUsd: 54.0,
     parasiticW: 0,
     isPcm: true,
-    note: 'Paraffin/expanded-graphite matrix (Tₘₑₗₜ = 44°C, Lf = 180 kJ/kg latent clamping)'
+    note: 'Paraffin/expanded-graphite matrix (T_melt = 44°C, L_f = 180 kJ/kg latent clamping)'
   }
 };
 
@@ -469,7 +469,7 @@ function evaluatePack(design, conditions, options = {}) {
   const heightMm = Math.round(cell.heightMm + 34);
   const packVolumeLiters = ((lengthMm * widthMm * heightMm) / 1e6) * cooling.volumeMultiplier;
 
-  // Effective heat transfer area A_eff (m²): external casing + internal ventilated cell surfaces
+  // Effective heat transfer area A_eff (m^2): external casing + internal ventilated cell surfaces
   const casingAreaM2 = 2 * ((lengthMm * widthMm) + (lengthMm * heightMm) + (widthMm * heightMm)) / 1e6;
   const singleCellLateralAreaM2 = Math.PI * (cell.diameterMm / 1000) * (cell.heightMm / 1000);
   const internalFinFactor = design.cooling === 'Passive (Natural Convection)' ? 0.22 : 0.58;
@@ -584,7 +584,7 @@ function evaluatePack(design, conditions, options = {}) {
     : capexPerKWhThroughput;
 
   // Deterministic Cell Variation & Weakest Cell Analysis (Concept D / I1)
-  // Models ±3.5% cell resistance spread and ±2.2% capacity spread across the pack
+  // Models +-3.5% cell resistance spread and +-2.2% capacity spread across the pack
   const cellVariationStats = computeCellVariation(seriesCount, parallelCount, cell, cellCurrentA, steadyPeakTemp, bms);
 
   // Concept A: Design Contract Engine (Fixes D9, H1)
@@ -639,8 +639,8 @@ function computeCellVariation(seriesCount, parallelCount, cell, nominalCellCurre
     for (let r = 0; r < maxRows; r++) {
       const seed = Math.sin((c + 1) * 12.9898 + (r + 1) * 78.233) * 43758.5453;
       const frac = seed - Math.floor(seed); // 0..1
-      const rMultiplier = 1.0 + (frac - 0.5) * 0.08; // ±4% IR spread
-      const capMultiplier = 1.0 + ((1 - frac) - 0.5) * 0.05; // ±2.5% capacity spread
+      const rMultiplier = 1.0 + (frac - 0.5) * 0.08; // +-4% IR spread
+      const capMultiplier = 1.0 + ((1 - frac) - 0.5) * 0.05; // +-2.5% capacity spread
       branchR.push({ rMultiplier, capMultiplier });
     }
     const conductanceSum = branchR.reduce((acc, b) => acc + (1 / b.rMultiplier), 0);
@@ -648,7 +648,7 @@ function computeCellVariation(seriesCount, parallelCount, cell, nominalCellCurre
     for (let r = 0; r < maxRows; r++) {
       if (!grid[r]) grid[r] = [];
       const b = branchR[r];
-      // Current sharing Iᵢ = I_total * (Gᵢ / sum(G))
+      // Current sharing I_i = I_total * (G_i / sum(G))
       const currentShareRatio = (1 / b.rMultiplier) / (conductanceSum / maxRows);
       const cellAmp = nominalCellCurrentA * currentShareRatio;
 
@@ -784,7 +784,7 @@ function evaluateDesignContracts(ctx) {
 }
 
 // ============================================================================
-// 8. WMTC MISSION PROFILE DUTY CYCLE GENERATOR (Concept C / I2)
+// 8.WMTC MISSION PROFILE DUTY CYCLE GENERATOR (Concept C / I2)
 // ============================================================================
 function generateWmtcDutyFactor(stepIdx, totalSteps) {
   // Approximates UNECE GTR No. 2 (WMTC Part 1 Urban Scooter Cycle: stop-and-go peaks + regen coasting)
@@ -802,14 +802,13 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('workbench');
   const [copySuccess, setCopySuccess] = useState('');
   const [showReportModal, setShowReportModal] = useState(false);
-  const [lightMode, setLightMode] = useState(() => {
-    try { return localStorage.getItem('theme') === 'light'; } catch (e) { return false; }
-  });
-  React.useEffect(() => {
-    document.documentElement.classList.toggle('light', lightMode);
-    try { localStorage.setItem('theme', lightMode ? 'light' : 'dark'); } catch (e) {}
-  }, [lightMode]);
-
+const [lightMode, setLightMode] = useState(() => {
+  try { return localStorage.getItem('theme') === 'light'; } catch (e) { return false; }
+});
+React.useEffect(() => {
+  document.documentElement.classList.toggle('light', lightMode);
+  try { localStorage.setItem('theme', lightMode ? 'light' : 'dark'); } catch (e) {}
+}, [lightMode]);
   // Stage 6/7 Policy Controls: Model Mode Switch (Physics-Corrected vs Legacy) & Cost Basis
   const [modelMode, setModelMode] = useState('physics'); // 'physics' | 'legacy'
   const [costBasis, setCostBasis] = useState('volume');  // 'volume' | 'retail'
@@ -953,7 +952,7 @@ export default function App() {
             ev.totalMassEst <= appProfile.maxMassKg * 1.25 &&
             ev.contracts.criticalCount === 0;
 
-          // Monte Carlo thermal/current violation risk under ±5°C ambient & ±4% IR spread
+          // Monte Carlo thermal/current violation risk under +-5°C ambient & +-4% IR spread
           const tempMargin = appProfile.maxTemp1CCelsius - ev.tempAtStated1C;
           const riskPct = Math.round(Math.max(1, Math.min(99, 50 * Math.exp(-tempMargin / 4.5))));
 
@@ -1101,14 +1100,14 @@ export default function App() {
     setDesignSelection('Option A (High Energy, Active Cooling)');
   };
 
-  // Structured Engineering Report & JSON Export (Unicode Subscripts/Superscripts)
+  // Structured Engineering Report & JSON Export (Fixes C6)
   const buildStructuredReportText = () => {
     return `AlchoCells: Simulate First. Build Next.
 =====================================================================
 1. SCOPE & TARGET APPLICATION
    Application:        ${config.application} (${appProfile.roleBadge})
    Active Design Slot: ${config.designSelection}
-   Physics Engine:     ${modelMode === 'physics' ? 'Physics-Corrected (Size-scaled Rₜₕ, τ = Rₜₕ·Cₜₕ, OCV Table, DCIR)' : 'Legacy Simplified'}
+   Physics Engine:     ${modelMode === 'physics' ? 'Physics-Corrected (Size-scaled R_th, tau=R_th*C_th, OCV Table, DCIR)' : 'Legacy Simplified'}
    Cost Basis:         ${costBasis === 'volume' ? 'OEM Volume Pricing (BNEF $133/kWh 2W/3W benchmark aligned)' : 'Single-Unit Distributor Retail'}
 
 2. ACTIVE CONFIGURATION (${seriesCount}S ${parallelCount}P — ${totalCells} Cells)
@@ -1122,19 +1121,19 @@ export default function App() {
    Nominal Voltage:    ${packVoltage.toFixed(1)} V (Window: ${appProfile.vMinReq}–${appProfile.vMaxReq} V)
    Nominal / Usable:   ${packEnergyWh.toFixed(0)} Wh gross | ${usableEnergyAt1CWh.toFixed(0)} Wh usable @ 1C (${(currentEval.bms.dodWindow*100).toFixed(0)}% DoD)
    Mass & Volume:      ${totalMassEst.toFixed(2)} kg | ${packVolumeLiters.toFixed(2)} L (${lengthMm}×${widthMm}×${heightMm} mm)
-   Thermal @ 1C:       ${tempAtStated1C.toFixed(1)} °C (Rₜₕ = ${rTh.toFixed(3)} K/W, τ = ${Math.round(tauSec)} s, Q₁C = ${currentEval.qGen1C.toFixed(1)} W)
+   Thermal @ 1C:       ${tempAtStated1C.toFixed(1)} °C (R_th = ${rTh.toFixed(3)} K/W, tau = ${Math.round(tauSec)} s, Q_1C = ${currentEval.qGen1C.toFixed(1)} W)
    Fast-Charge Time:   ${chargeTimeMinutes} mins (10–90% CC-CV @ max ${cell.maxChargeA}A/cell)
    Pack BOM Cost:      $${totalCostEst.toFixed(0)} (${inr(totalCostEst)}) ($${packCostPerKWh.toFixed(0)}/kWh = ${inr(packCostPerKWh)}/kWh) | CapEx Throughput: $${lcos.toFixed(3)}/kWh | Full LCOS: $${fullLcosPerKWh.toFixed(3)}/kWh
 
 4. SIDE-BY-SIDE COMPARISON SUMMARY (AT STATED 1C REFERENCE)
-- Baseline: ${evalBaseline.seriesCount}S${evalBaseline.parallelCount}P ${evalBaseline.design.cellChemistry} | ${Math.round(evalBaseline.usableEnergyAt1CWh)} Wh | ${evalBaseline.tempAtStated1C.toFixed(1)}°C | ${evalBaseline.chargeTimeMinutes} min | ${evalBaseline.totalMassEst.toFixed(1)} kg | $${Math.round(evalBaseline.totalCostEst)} (${inr(evalBaseline.totalCostEst)})
-  - Option A: ${evalOptionA.seriesCount}S${evalOptionA.parallelCount}P ${evalOptionA.design.cellChemistry} | ${Math.round(evalOptionA.usableEnergyAt1CWh)} Wh | ${evalOptionA.tempAtStated1C.toFixed(1)}°C | ${evalOptionA.chargeTimeMinutes} min | ${evalOptionA.totalMassEst.toFixed(1)} kg | $${Math.round(evalOptionA.totalCostEst)} (${inr(evalOptionA.totalCostEst)})
-  - Option B: ${evalOptionB.seriesCount}S${evalOptionB.parallelCount}P ${evalOptionB.design.cellChemistry} | ${Math.round(evalOptionB.usableEnergyAt1CWh)} Wh | ${evalOptionB.tempAtStated1C.toFixed(1)}°C | ${evalOptionB.chargeTimeMinutes} min | ${evalOptionB.totalMassEst.toFixed(1)} kg | $${Math.round(evalOptionB.totalCostEst)} (${inr(evalOptionB.totalCostEst)})
+   - Baseline: ${evalBaseline.seriesCount}S${evalBaseline.parallelCount}P ${evalBaseline.design.cellChemistry} | ${Math.round(evalBaseline.usableEnergyAt1CWh)} Wh | ${evalBaseline.tempAtStated1C.toFixed(1)}°C | ${evalBaseline.chargeTimeMinutes} min | ${evalBaseline.totalMassEst.toFixed(1)} kg | $${Math.round(evalBaseline.totalCostEst)} (${inr(evalBaseline.totalCostEst)})
+   - Option A: ${evalOptionA.seriesCount}S${evalOptionA.parallelCount}P ${evalOptionA.design.cellChemistry} | ${Math.round(evalOptionA.usableEnergyAt1CWh)} Wh | ${evalOptionA.tempAtStated1C.toFixed(1)}°C | ${evalOptionA.chargeTimeMinutes} min | ${evalOptionA.totalMassEst.toFixed(1)} kg | $${Math.round(evalOptionA.totalCostEst)} (${inr(evalOptionA.totalCostEst)})
+   - Option B: ${evalOptionB.seriesCount}S${evalOptionB.parallelCount}P ${evalOptionB.design.cellChemistry} | ${Math.round(evalOptionB.usableEnergyAt1CWh)} Wh | ${evalOptionB.tempAtStated1C.toFixed(1)}°C | ${evalOptionB.chargeTimeMinutes} min | ${evalOptionB.totalMassEst.toFixed(1)} kg | $${Math.round(evalOptionB.totalCostEst)} (${inr(evalOptionB.totalCostEst)})
 
 5. DESIGN CONTRACT AUDIT & STATED LIMITATIONS
    Contract Status:    ${contracts.criticalCount} Critical Violation(s), ${contracts.warningCount} Warning(s)
    Stated Limitations: Lumped-capacitance thermal model (Bi < 0.1 assumption); convection coefficients h are textbook engineering estimates; does not replace physical AIS-156 thermal propagation nail-penetration testing.
-   Recommended Next Step: Construct a safe 4S2P (< 16.8V) low-voltage bench sub-module with a 15A blade fuse, 4× NTC thermistors, and fireproof containment to empirically calibrate Rₜₕ and τ.`;
+   Recommended Next Step: Construct a safe 4S2P (<16.8V) low-voltage bench sub-module with a 15A blade fuse, 4x NTC thermistors, and fireproof containment to empirically calibrate R_th and tau.`;
   };
 
   const exportSummary = () => {
@@ -1269,6 +1268,7 @@ export default function App() {
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-xl font-bold tracking-wide">AlchoCells <span className="font-light text-cyan-500"></span></h1>
+          
             </div>
             <p className="text-[11px] text-slate-400">Simulate First. Build Next.</p>
           </div>
@@ -1311,13 +1311,13 @@ export default function App() {
               Retail
             </button>
           </div>
-          <button
-            type="button"
-            onClick={() => setLightMode(m => !m)}
-            className="px-3 py-2 rounded text-xs font-bold border border-slate-700 bg-slate-800 text-slate-200"
-          >
-            {lightMode ? 'Dark mode' : 'Light mode'}
-          </button>
+<button
+  type="button"
+  onClick={() => setLightMode(m => !m)}
+  className="px-3 py-2 rounded text-xs font-bold border border-slate-700 bg-slate-800 text-slate-200"
+>
+  {lightMode ? 'Dark mode' : 'Light mode'}
+</button>
           {copySuccess && <span className="text-emerald-400 text-sm flex items-center"><CheckCircle2 className="w-4 h-4 mr-1"/> {copySuccess}</span>}
           <button
             onClick={exportSummary}
@@ -1399,66 +1399,121 @@ export default function App() {
              ===================================================================== */}
           {activeTab === 'workbench' && (
             <div className="space-y-6">
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2 space-y-6">
-                  {/* Core Configuration Card */}
-                  <div className="bg-slate-900 rounded-md border border-slate-800 p-6">
-                    <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
-                      <h2 className="text-lg font-semibold text-slate-100 flex items-center">
-                        <Settings className="w-5 h-5 mr-2 text-cyan-500"/> Core Configuration
-                      </h2>
-                      <span className="text-xs px-2.5 py-1 rounded bg-slate-800 text-cyan-300 border border-slate-700">
-                        {appProfile.roleBadge}
-                      </span>
+
+              {/* HEADLINE: design name + contract status */}
+              <div className="flex flex-wrap items-end justify-between gap-3">
+                <div>
+                  <p className="text-[11px] uppercase tracking-widest text-slate-500 font-semibold">
+                    {config.application} · {config.designSelection.split(' (')[0].replace(' Starting', '')}
+                  </p>
+                  <h2 className="text-3xl font-bold text-slate-100 mt-1">{seriesCount}S{parallelCount}P {config.cellChemistry}</h2>
+                  <p className="text-xs text-slate-500 mt-1">{appProfile.roleBadge}</p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2 text-xs">
+                  {contracts.criticalCount > 0 && (
+                    <span className="px-2.5 py-1 rounded-full border bg-rose-950/60 border-rose-800 text-rose-300 font-semibold">{contracts.criticalCount} critical</span>
+                  )}
+                  {contracts.warningCount > 0 && (
+                    <span className="px-2.5 py-1 rounded-full border bg-amber-950/60 border-amber-800 text-amber-300 font-semibold">{contracts.warningCount} warning</span>
+                  )}
+                  <span className="text-slate-400 font-mono">{contracts.rules.length - contracts.violations.length} of {contracts.rules.length} rules satisfied</span>
+                </div>
+              </div>
+
+              {/* KPI STRIP */}
+              <div className="bg-slate-900 rounded-xl border border-slate-800 grid grid-cols-2 md:grid-cols-5 divide-x divide-slate-800">
+                {[
+                  {
+                    label: 'Usable energy',
+                    value: `${Math.round(usableEnergyAt1CWh).toLocaleString()} Wh`,
+                    sub: `Target ≥ ${appProfile.usableEnergyMinWh.toLocaleString()} Wh`,
+                    bad: usableEnergyAt1CWh < appProfile.usableEnergyMinWh
+                  },
+                  {
+                    label: 'Peak temperature',
+                    value: `${steadyPeakTemp.toFixed(1)} °C`,
+                    sub: `Limit ≤ ${Math.min(params.bmsTempTrip, appProfile.maxTemp1CCelsius + 3)} °C`,
+                    bad: steadyPeakTemp > Math.min(params.bmsTempTrip, appProfile.maxTemp1CCelsius + 3)
+                  },
+                  {
+                    label: 'Mass',
+                    value: `${totalMassEst.toFixed(2)} kg`,
+                    sub: `Limit ≤ ${appProfile.maxMassKg} kg`,
+                    bad: totalMassEst > appProfile.maxMassKg
+                  },
+                  {
+                    label: 'Charge time',
+                    value: `${chargeTimeMinutes} min`,
+                    sub: `Limit ≤ ${appProfile.maxChargeTimeMin} min`,
+                    bad: chargeTimeMinutes > appProfile.maxChargeTimeMin
+                  },
+                  {
+                    label: 'Pack cost',
+                    value: `$${Math.round(totalCostEst).toLocaleString()}`,
+                    sub: `$${packCostPerKWh.toFixed(0)} / kWh`,
+                    rupee: `${inr(totalCostEst)} · ${inr(packCostPerKWh)} / kWh`,
+                    bad: false
+                  }
+                ].map(k => (
+                  <div key={k.label} className="p-5">
+                    <p className="text-xs text-slate-500">{k.label}</p>
+                    <p className="text-2xl font-bold text-slate-100 mt-1">{k.value}</p>
+                    <p className={`text-xs mt-1 ${k.bad ? 'text-rose-400' : 'text-slate-500'}`}>{k.sub}</p>
+                    {k.rupee && <p className="text-xs mt-0.5 text-emerald-400">{k.rupee}</p>}
+                  </div>
+                ))}
+              </div>
+
+              {/* CONFIGURATION + PACK LAYOUT */}
+              <div className="grid grid-cols-1 lg:grid-cols-[1.25fr_1fr] gap-6">
+
+                {/* Configuration card */}
+                <div className="bg-slate-900 rounded-xl border border-slate-800 p-6 space-y-5">
+                  <p className="text-[11px] uppercase tracking-widest text-slate-500 font-semibold">Configuration</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label htmlFor="select-application" className="block text-[11px] text-slate-500 mb-1">Target application</label>
+                      <select id="select-application" name="application" value={config.application} onChange={handleConfigChange} className="w-full p-2 bg-slate-800 border border-slate-700 text-slate-200 rounded focus:ring-2 focus:ring-cyan-500 outline-none text-sm">
+                        <option>Swappable 48V E-Scooter Module</option>
+                        <option>24V ICU Medical Cart Backup</option>
+                        <option>22.2V Agricultural Drone Pack</option>
+                        <option>48V Microgrid Rack</option>
+                      </select>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label htmlFor="select-designSelection" className="block text-[11px] text-slate-500 mb-1">Design slot (edits live option)</label>
+                      <select id="select-designSelection" name="designSelection" value={config.designSelection} onChange={handleConfigChange} className="w-full p-2 bg-slate-800 border border-cyan-700/60 text-cyan-300 font-semibold rounded focus:ring-2 focus:ring-cyan-500 outline-none text-sm">
+                        <option>Baseline Starting Design</option>
+                        <option>Option A (High Energy, Active Cooling)</option>
+                        <option>Option B (High Power, LFP Chemistry)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label htmlFor="select-cellChemistry" className="block text-[11px] text-slate-500 mb-1">Cell chemistry</label>
+                      <select id="select-cellChemistry" name="cellChemistry" value={config.cellChemistry} onChange={handleConfigChange} className="w-full p-2 bg-slate-800 border border-slate-700 text-slate-200 rounded focus:ring-2 focus:ring-cyan-500 outline-none text-sm">
+                        <option>Samsung 35E</option>
+                        <option>Molicel P42A</option>
+                        <option>A123 26650 LFP</option>
+                        <option>EVE LF50K</option>
+                      </select>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <label htmlFor="select-application" className="block text-sm font-medium text-slate-400 mb-1">Target Application</label>
-                        <select id="select-application" name="application" value={config.application} onChange={handleConfigChange} className="w-full p-2 bg-slate-800 border border-slate-700 text-slate-200 rounded focus:ring-2 focus:ring-cyan-500 outline-none text-sm">
-                          <option>Swappable 48V E-Scooter Module</option>
-                          <option>24V ICU Medical Cart Backup</option>
-                          <option>22.2V Agricultural Drone Pack</option>
-                          <option>48V Microgrid Rack</option>
-                        </select>
+                        <label htmlFor="input-series" className="block text-[11px] text-slate-500 mb-1">Series (S)</label>
+                        <input id="input-series" type="number" name="series" value={config.series} onChange={handleConfigChange} min="1" max="100" className="w-full p-2 bg-slate-800 border border-slate-700 text-slate-200 rounded focus:ring-2 focus:ring-cyan-500 outline-none text-sm font-mono" />
                       </div>
                       <div>
-                        <label htmlFor="select-designSelection" className="block text-sm font-medium text-slate-400 mb-1">Active Design Slot (Edits Live Option)</label>
-                        <select id="select-designSelection" name="designSelection" value={config.designSelection} onChange={handleConfigChange} className="w-full p-2 bg-slate-800 border border-cyan-700/60 text-cyan-300 font-semibold rounded focus:ring-2 focus:ring-cyan-500 outline-none text-sm">
-                          <option>Baseline Starting Design</option>
-                          <option>Option A (High Energy, Active Cooling)</option>
-                          <option>Option B (High Power, LFP Chemistry)</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label htmlFor="select-cellChemistry" className="block text-sm font-medium text-slate-400 mb-1">Cell Chemistry (Datasheet Reconciled)</label>
-                        <select id="select-cellChemistry" name="cellChemistry" value={config.cellChemistry} onChange={handleConfigChange} className="w-full p-2 bg-slate-800 border border-slate-700 text-slate-200 rounded focus:ring-2 focus:ring-cyan-500 outline-none text-sm">
-                          <option>Samsung 35E</option>
-                          <option>Molicel P42A</option>
-                          <option>A123 26650 LFP</option>
-                          <option>EVE LF50K</option>
-                        </select>
-                      </div>
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <label htmlFor="input-series" className="block text-sm font-medium text-slate-400 mb-1">Series (S)</label>
-                          <input id="input-series" type="number" name="series" value={config.series} onChange={handleConfigChange} min="1" max="100" className="w-full p-2 bg-slate-800 border border-slate-700 text-slate-200 rounded focus:ring-2 focus:ring-cyan-500 outline-none text-sm font-mono" />
-                        </div>
-                        <div>
-                          <label htmlFor="input-parallel" className="block text-sm font-medium text-slate-400 mb-1">Parallel (P)</label>
-                          <input id="input-parallel" type="number" name="parallel" value={config.parallel} onChange={handleConfigChange} min="1" max="100" className="w-full p-2 bg-slate-800 border border-slate-700 text-slate-200 rounded focus:ring-2 focus:ring-cyan-500 outline-none text-sm font-mono" />
-                        </div>
+                        <label htmlFor="input-parallel" className="block text-[11px] text-slate-500 mb-1">Parallel (P)</label>
+                        <input id="input-parallel" type="number" name="parallel" value={config.parallel} onChange={handleConfigChange} min="1" max="100" className="w-full p-2 bg-slate-800 border border-slate-700 text-slate-200 rounded focus:ring-2 focus:ring-cyan-500 outline-none text-sm font-mono" />
                       </div>
                     </div>
                   </div>
 
-                  {/* Subsystem Integration Card (All dropdowns wired into physics, mass & cost) */}
-                  <div className="bg-slate-900 rounded-md border border-slate-800 p-6">
-                    <h2 className="text-lg font-semibold text-slate-100 mb-4 flex items-center">
-                      <ShieldCheck className="w-5 h-5 mr-2 text-cyan-500"/> Subsystem Integration (Coupled Parameters)
-                    </h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="border-t border-slate-800 pt-5 space-y-4">
+                    <p className="text-[11px] uppercase tracking-widest text-slate-500 font-semibold">Subsystems</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <label htmlFor="select-busbars" className="block text-sm font-medium text-slate-400 mb-1">Interconnect Busbars</label>
+                        <label htmlFor="select-busbars" className="block text-[11px] text-slate-500 mb-1">Busbars</label>
                         <select id="select-busbars" name="busbars" value={config.busbars} onChange={handleConfigChange} className="w-full p-2 bg-slate-800 border border-slate-700 text-slate-200 rounded focus:ring-2 focus:ring-cyan-500 outline-none text-sm">
                           <option>Nickel Strips (0.15mm)</option>
                           <option>Copper-Nickel Sandwich (0.2mm)</option>
@@ -1467,7 +1522,7 @@ export default function App() {
                         </select>
                       </div>
                       <div>
-                        <label htmlFor="select-cooling" className="block text-sm font-medium text-slate-400 mb-1">Cooling Arrangement</label>
+                        <label htmlFor="select-cooling" className="block text-[11px] text-slate-500 mb-1">Cooling</label>
                         <select id="select-cooling" name="cooling" value={config.cooling} onChange={handleConfigChange} className="w-full p-2 bg-slate-800 border border-slate-700 text-slate-200 rounded focus:ring-2 focus:ring-cyan-500 outline-none text-sm">
                           <option>Passive (Natural Convection)</option>
                           <option>Active Air (Forced Fans)</option>
@@ -1476,7 +1531,7 @@ export default function App() {
                         </select>
                       </div>
                       <div>
-                        <label htmlFor="select-spacing" className="block text-sm font-medium text-slate-400 mb-1">Cell Holder Spacing (AIS-156 Propagation)</label>
+                        <label htmlFor="select-spacing" className="block text-[11px] text-slate-500 mb-1">Cell holder spacing</label>
                         <select id="select-spacing" name="spacing" value={config.spacing} onChange={handleConfigChange} className="w-full p-2 bg-slate-800 border border-slate-700 text-slate-200 rounded focus:ring-2 focus:ring-cyan-500 outline-none text-sm">
                           <option>1.5mm Compact Holders</option>
                           <option>2mm Cylindrical Holders</option>
@@ -1485,7 +1540,7 @@ export default function App() {
                         </select>
                       </div>
                       <div>
-                        <label htmlFor="select-bmsTier" className="block text-sm font-medium text-slate-400 mb-1">BMS Protection & Sensing Tier</label>
+                        <label htmlFor="select-bmsTier" className="block text-[11px] text-slate-500 mb-1">BMS tier</label>
                         <select id="select-bmsTier" name="bmsTier" value={config.bmsTier} onChange={handleConfigChange} className="w-full p-2 bg-slate-800 border border-slate-700 text-slate-200 rounded focus:ring-2 focus:ring-cyan-500 outline-none text-sm">
                           <option>Standard (Passive Balancing)</option>
                           <option>Advanced (Active Balancing, CAN bus)</option>
@@ -1493,179 +1548,125 @@ export default function App() {
                         </select>
                       </div>
                     </div>
-
-                    {/* Derived Thermal & Economic Coupled Strip */}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4 pt-4 border-t border-slate-800 text-xs">
-                      <div className="p-2.5 bg-slate-950 border border-slate-800 rounded">
-                        <span className="text-slate-500 block">Derived Thermal R<sub>th</sub> & τ:</span>
-                        <span className="font-mono text-cyan-400 font-bold">{rTh.toFixed(2)} K/W · τ = {Math.round(tauSec)} s</span>
-                      </div>
-                      <div className="p-2.5 bg-slate-950 border border-slate-800 rounded">
-                        <span className="text-slate-500 block">CapEx / Throughput (D8):</span>
-                        <span className="font-mono text-emerald-400 font-bold">${lcos.toFixed(3)}/kWh (Full LCOS: ${fullLcosPerKWh.toFixed(2)}) · {inr(lcos, 2)}/kWh (Full: {inr(fullLcosPerKWh, 2)})</span>
-                      </div>
-                      <div className="p-2.5 bg-slate-950 border border-slate-800 rounded">
-                        <span className="text-slate-500 block">CC-CV Charge (10–90%):</span>
-                        <span className="font-mono text-slate-200 font-bold">{chargeTimeMinutes} mins (≤{cell.maxChargeA}A/cell)</span>
-                      </div>
-                    </div>
                   </div>
 
-                  {/* Concept A: Design Contract Engine & Interface-Conflict Checker */}
-                  <div className="bg-slate-900 rounded-md border border-slate-800 p-6">
-                    <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-                      <h2 className="text-base font-semibold text-slate-100 flex items-center">
-                        <AlertTriangle className="w-4 h-4 mr-2 text-amber-400"/> Design Contract Engine (Interface Conflicts & Safety SOA)
-                      </h2>
-                      <span className="text-xs font-mono text-slate-400">
-                        {contracts.rules.length - contracts.violations.length}/{contracts.rules.length} Rules Satisfied
-                      </span>
+                  {/* Derived thermal & economic strip (kept, includes rupee values) */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-5 border-t border-slate-800 text-xs">
+                    <div className="p-2.5 bg-slate-950 border border-slate-800 rounded">
+                      <span className="text-slate-500 block">Derived thermal R_th & τ:</span>
+                      <span className="font-mono text-cyan-400 font-bold">{rTh.toFixed(2)} K/W · τ = {Math.round(tauSec)} s</span>
                     </div>
-                    <div className="space-y-2.5">
-                      {contracts.rules.map(rule => (
-                        <div
-                          key={rule.id}
-                          className={`p-3 rounded border text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2 ${
-                            rule.passed
-                              ? 'bg-slate-950/60 border-slate-800 text-slate-300'
-                              : rule.severity === 'CRITICAL'
-                              ? 'bg-rose-950/40 border-rose-800 text-rose-200'
-                              : 'bg-amber-950/40 border-amber-800 text-amber-200'
-                          }`}
-                        >
-                          <div className="space-y-0.5">
-                            <div className="flex items-center gap-2">
-                              <span className={`font-mono font-bold px-1.5 py-0.5 rounded text-[10px] ${
-                                rule.passed
-                                  ? 'bg-emerald-950 text-emerald-400 border border-emerald-800'
-                                  : rule.severity === 'CRITICAL'
-                                  ? 'bg-rose-600 text-slate-950'
-                                  : 'bg-amber-500 text-slate-950'
-                              }`}>
-                                {rule.passed ? '✓ PASS' : `✗ ${rule.severity}`}
-                              </span>
-                              <span className="font-mono text-slate-400">{rule.id}</span>
-                              <strong className="text-slate-100">{rule.title}</strong>
-                            </div>
-                            {!rule.passed && (
-                              <p className="text-[11px] text-slate-300 pl-1">
-                                <span className="font-semibold text-cyan-300">Fix:</span> {rule.fixHint} <span className="text-slate-500">({rule.source})</span>
-                              </p>
-                            )}
-                          </div>
-                          <div className="font-mono text-[11px] shrink-0 text-right">
-                            <div>Measured: <strong className="text-white">{rule.measured}</strong></div>
-                            <div className="text-slate-500">Limit: {rule.limit}</div>
-                          </div>
-                        </div>
-                      ))}
+                    <div className="p-2.5 bg-slate-950 border border-slate-800 rounded">
+                      <span className="text-slate-500 block">CapEx / throughput:</span>
+                      <span className="font-mono text-emerald-400 font-bold">${lcos.toFixed(3)}/kWh (Full LCOS: ${fullLcosPerKWh.toFixed(2)}) · {inr(lcos, 2)}/kWh (Full: {inr(fullLcosPerKWh, 2)})</span>
+                    </div>
+                    <div className="p-2.5 bg-slate-950 border border-slate-800 rounded">
+                      <span className="text-slate-500 block">CC-CV charge (10–90%):</span>
+                      <span className="font-mono text-slate-200 font-bold">{chargeTimeMinutes} mins (≤{cell.maxChargeA}A/cell)</span>
                     </div>
                   </div>
                 </div>
 
-                {/* Right Column: Virtual Prototype Summary Card + Per-Cell Variation Grid */}
-                <div className="bg-slate-900 text-slate-200 rounded-md border border-slate-800 p-6 flex flex-col h-full">
-                  <div className="flex items-center justify-between border-b border-slate-800 pb-2 mb-4">
-                    <h2 className="text-lg font-semibold text-white flex items-center">
-                      <Battery className="w-5 h-5 mr-2 text-cyan-400"/> Virtual Pack Prototype
-                    </h2>
-                    <span className="text-[11px] font-mono text-slate-400">Digital Thread</span>
+                {/* Pack layout card */}
+                <div className="bg-slate-900 rounded-xl border border-slate-800 p-6 flex flex-col">
+                  <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+                    <p className="text-[11px] uppercase tracking-widest text-slate-500 font-semibold">Pack layout</p>
+                    <span className="text-[11px] font-mono text-slate-400">{lengthMm} × {widthMm} × {heightMm} mm · {packVolumeLiters.toFixed(1)} L</span>
                   </div>
 
-                  <div className="flex-1 space-y-4">
-                    <div className="bg-slate-950 p-3.5 rounded border border-slate-800 flex justify-between items-center">
-                      <div>
-                        <p className="text-xs text-slate-500 uppercase tracking-wider">Topology & Volume</p>
-                        <p className="text-2xl font-bold font-mono text-cyan-400">{seriesCount}S {parallelCount}P</p>
+                  <div className="p-4 bg-slate-950 rounded-lg overflow-x-auto flex flex-col gap-1.5 items-center">
+                    {cellVariationStats.grid.map((row, rIdx) => (
+                      <div key={rIdx} className="flex gap-1.5 items-center">
+                        {row.map((cellNode, cIdx) => {
+                          const isHot = cellNode.cellTempC > appProfile.maxTemp1CCelsius;
+                          const isHotspot = cellNode.id === cellVariationStats.weakestCellLabel;
+                          return (
+                            <div
+                              key={cIdx}
+                              title={`${cellNode.id}: ${cellNode.cellTempC.toFixed(1)}°C | ${cellNode.cellAmp.toFixed(1)}A | IR ${cellNode.irPct}% | Cap ${cellNode.capPct}%${cellNode.isNtcSensor ? ' | [NTC Sensor]' : ''}`}
+                              className={`${config.cellChemistry === 'EVE LF50K' ? 'w-4 h-6 rounded-sm' : 'w-4 h-4 rounded-full'} flex items-center justify-center text-[8px] font-mono font-bold select-none text-white ${
+                                isHot ? 'bg-rose-500' : 'bg-teal-600/80'
+                              } ${isHotspot ? 'ring-2 ring-rose-500 ring-offset-1' : ''}`}
+                            >
+                              {cellNode.isNtcSensor ? 'T' : ''}
+                            </div>
+                          );
+                        })}
                       </div>
-                      <div className="text-right font-mono text-xs text-slate-400">
-                        <div className="text-slate-200 font-bold">{packVolumeLiters.toFixed(1)} L</div>
-                        <div>{lengthMm}×{widthMm}×{heightMm} mm</div>
-                      </div>
-                    </div>
+                    ))}
+                    {(seriesCount > 16 || parallelCount > 8) && (
+                      <span className="text-[10px] text-slate-400 font-mono mt-1">
+                        Viewport: {Math.min(seriesCount, 16)}S × {Math.min(parallelCount, 8)}P of {seriesCount}S × {parallelCount}P pack
+                      </span>
+                    )}
+                  </div>
 
-                    {/* Topology Cell Matrix Preview with Cell-to-Cell Spread & Non-Colour Cues (Concept D) */}
-                    <div className="bg-slate-950 p-3 rounded border border-slate-800">
-                      <div className="flex justify-between items-center mb-2">
-                        <p className="text-xs text-slate-400 uppercase tracking-wider font-semibold">
-                          Cell Array ({totalCells} Cells · ±4% IR Spread)
-                        </p>
-                        <span className="text-[11px] font-mono text-amber-400">
-                          Hotspot: {cellVariationStats.weakestCellLabel} ({cellVariationStats.hottestCellTempC.toFixed(1)}°C)
+                  <div className="flex flex-wrap justify-between gap-1 text-[11px] text-slate-500 mt-3">
+                    <span>{totalCells} cells · ±4% IR spread · T = NTC sensor</span>
+                    <span className="text-rose-400 font-mono">Hotspot {cellVariationStats.weakestCellLabel} · {cellVariationStats.hottestCellTempC.toFixed(1)} °C</span>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 border-t border-slate-800 mt-5 pt-5">
+                    <div>
+                      <p className="text-[11px] text-slate-500">Voltage</p>
+                      <p className="text-lg font-semibold text-slate-100">{packVoltage.toFixed(1)} V</p>
+                    </div>
+                    <div>
+                      <p className="text-[11px] text-slate-500">Capacity</p>
+                      <p className="text-lg font-semibold text-slate-100">{packCapacity.toFixed(1)} Ah</p>
+                    </div>
+                    <div>
+                      <p className="text-[11px] text-slate-500">Branch current</p>
+                      <p className="text-lg font-semibold text-slate-100">{cellVariationStats.maxBranchCurrentA.toFixed(1)} A max</p>
+                    </div>
+                    <div>
+                      <p className="text-[11px] text-slate-500">Cell mass</p>
+                      <p className="text-lg font-semibold text-slate-100">{currentEval.cellMassTotal.toFixed(2)} kg</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* DESIGN CONTRACT CHECKS (failures first) */}
+              <div className="bg-slate-900 rounded-xl border border-slate-800 overflow-hidden">
+                <div className="flex items-center justify-between px-6 py-4">
+                  <p className="text-[11px] uppercase tracking-widest text-slate-500 font-semibold">Design contract checks</p>
+                  <span className="text-xs text-slate-500">Needs attention first</span>
+                </div>
+                {[...contracts.rules]
+                  .sort((a, b) => {
+                    const rank = r => (r.passed ? 3 : r.severity === 'CRITICAL' ? 0 : r.severity === 'WARNING' ? 1 : 2);
+                    return rank(a) - rank(b);
+                  })
+                  .map(rule => (
+                    <div
+                      key={rule.id}
+                      title={rule.source}
+                      className={`flex flex-col md:flex-row md:items-center gap-2 md:gap-4 px-6 py-3 border-t border-slate-800 text-xs ${
+                        !rule.passed && rule.severity === 'CRITICAL' ? 'bg-rose-950/30' : ''
+                      }`}
+                    >
+                      <div className="md:w-20 shrink-0">
+                        <span className={`inline-block px-2.5 py-0.5 rounded-full border text-[11px] font-semibold ${
+                          rule.passed
+                            ? 'bg-emerald-950/60 border-emerald-800 text-emerald-400'
+                            : rule.severity === 'CRITICAL'
+                            ? 'bg-rose-950/60 border-rose-800 text-rose-300'
+                            : rule.severity === 'WARNING'
+                            ? 'bg-amber-950/60 border-amber-800 text-amber-300'
+                            : 'bg-slate-800 border-slate-700 text-slate-300'
+                        }`}>
+                          {rule.passed ? 'Pass' : rule.severity === 'CRITICAL' ? 'Critical' : rule.severity === 'WARNING' ? 'Warning' : 'Info'}
                         </span>
                       </div>
-                      <div className="p-2.5 bg-slate-900/90 rounded border border-slate-800/80 overflow-x-auto max-h-48 flex flex-col gap-1.5 items-center">
-                        {cellVariationStats.grid.map((row, rIdx) => (
-                          <div key={rIdx} className="flex gap-1.5 items-center">
-                            {row.map((cellNode, cIdx) => {
-                              const isHot = cellNode.cellTempC > appProfile.maxTemp1CCelsius;
-                              const isWarm = cellNode.cellTempC > 44;
-                              return (
-                                <div
-                                  key={cIdx}
-                                  title={`${cellNode.id}: ${cellNode.cellTempC.toFixed(1)}°C | ${cellNode.cellAmp.toFixed(1)}A | IR ${cellNode.irPct}% | Cap ${cellNode.capPct}%${cellNode.isNtcSensor ? ' | [NTC Sensor]' : ''}`}
-                                  className={`${config.cellChemistry === 'EVE LF50K' ? 'w-4 h-6 rounded-sm' : 'w-4 h-4 rounded-full'} border flex items-center justify-center text-[8px] font-mono font-bold select-none ${
-                                    isHot
-                                      ? 'bg-rose-500/85 border-rose-200 text-slate-950'
-                                      : isWarm
-                                      ? 'bg-amber-500/80 border-amber-200 text-slate-950'
-                                      : 'bg-emerald-500/80 border-emerald-200 text-slate-950'
-                                  }`}
-                                >
-                                  {cellNode.isNtcSensor ? 'T' : isHot ? '!' : ''}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        ))}
-                        {(seriesCount > 16 || parallelCount > 8) && (
-                          <span className="text-[10px] text-slate-400 font-mono mt-1">
-                            Viewport: {Math.min(seriesCount, 16)}S × {Math.min(parallelCount, 8)}P of {seriesCount}S × {parallelCount}P pack
-                          </span>
-                        )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-slate-100">{rule.title}</p>
+                        {!rule.passed && <p className="text-slate-400 mt-0.5">Fix: {rule.fixHint}</p>}
                       </div>
-                      <div className="flex flex-wrap justify-between items-center text-[10px] text-slate-400 mt-2 gap-1">
-                        <span>Max branch: <strong className="text-slate-200 font-mono">{cellVariationStats.maxBranchCurrentA.toFixed(1)}A</strong> (Spread derate: -{cellVariationStats.packCapacityDeratePct.toFixed(1)}%)</span>
-                        <span className="font-mono">[T]=NTC · [!]=Over-temp</span>
-                      </div>
+                      <div className="font-mono text-slate-300 md:w-64">{rule.measured}</div>
+                      <div className="font-mono text-slate-500 md:w-56 md:text-right">{rule.limit}</div>
                     </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="bg-slate-950 p-3 rounded border border-slate-800">
-                        <p className="text-xs text-slate-500 uppercase">Nom. Voltage</p>
-                        <p className="text-lg font-bold font-mono text-slate-200">{packVoltage.toFixed(1)} V</p>
-                      </div>
-                      <div className="bg-slate-950 p-3 rounded border border-slate-800">
-                        <p className="text-xs text-slate-500 uppercase">Capacity</p>
-                        <p className="text-lg font-bold font-mono text-slate-200">{packCapacity.toFixed(1)} Ah</p>
-                      </div>
-                    </div>
-
-                    <div className="bg-slate-950 p-3.5 rounded border border-slate-800 flex justify-between items-baseline">
-                      <div>
-                        <p className="text-xs text-slate-500 uppercase">Usable Energy (@1C)</p>
-                        <p className="text-2xl font-bold font-mono text-emerald-400">{usableEnergyAt1CWh.toFixed(0)} Wh</p>
-                      </div>
-                      <div className="text-right text-xs font-mono text-slate-400">
-                        <div>Nominal: {packEnergyWh.toFixed(0)} Wh</div>
-                        <div>DoD: {(currentEval.bms.dodWindow * 100).toFixed(0)}%</div>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="bg-slate-950 p-3 rounded border border-slate-800">
-                        <p className="text-xs text-slate-500 uppercase">Est. Mass</p>
-                        <p className="text-base font-mono font-bold text-slate-200">{totalMassEst.toFixed(2)} kg</p>
-                        <p className="text-[10px] text-slate-500 font-mono">Cells: {currentEval.cellMassTotal.toFixed(2)} kg</p>
-                      </div>
-                      <div className="bg-slate-950 p-3 rounded border border-slate-800">
-                        <p className="text-xs text-slate-500 uppercase">BOM Cost ({costBasis})</p>
-                        <p className="text-base font-mono font-bold text-slate-200">${totalCostEst.toFixed(0)} <span className="text-emerald-400">({inr(totalCostEst)})</span></p>
-                        <p className="text-[10px] text-slate-500 font-mono">${packCostPerKWh.toFixed(0)}/kWh · {inr(packCostPerKWh)}/kWh</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                  ))}
               </div>
             </div>
           )}
@@ -1745,7 +1746,7 @@ export default function App() {
                         <td className="px-4 py-3 text-emerald-400 font-bold">{Math.round(evalOptionB.usableEnergyAt1CWh)} Wh <span className="text-slate-500">({Math.round(evalOptionB.packEnergyWh)} gross)</span></td>
                       </tr>
                       <tr className="hover:bg-slate-800/50">
-                        <td className="px-4 py-3 font-sans font-medium text-slate-200">Peak Temp @ 1C Discharge (°C) <span className="text-slate-500 block text-[11px]">Size-scaled R<sub>th</sub> = 1/(h·A<sub>eff</sub>), τ = R<sub>th</sub>·C<sub>th</sub></span></td>
+                        <td className="px-4 py-3 font-sans font-medium text-slate-200">Peak Temp @ 1C Discharge (°C) <span className="text-slate-500 block text-[11px]">Size-scaled R_th = 1/(h·A_eff), τ = R_th·C_th</span></td>
                         <td className="px-4 py-3 text-slate-400">≤ {appProfile.maxTemp1CCelsius}°C</td>
                         <td className={`px-4 py-3 ${evalBaseline.tempAtStated1C > appProfile.maxTemp1CCelsius ? 'text-rose-400 font-bold' : ''}`}>{evalBaseline.tempAtStated1C.toFixed(1)}°C</td>
                         <td className="px-4 py-3">{evalOptionA.tempAtStated1C.toFixed(1)}°C</td>
@@ -1932,7 +1933,7 @@ export default function App() {
                     {/* Terminal / Harness Resistance Slider (Fixes D7: exposes busbarResistance) */}
                     <div>
                       <label htmlFor="slider-busbarRes" className="block text-sm font-medium text-slate-400 mb-1 flex justify-between">
-                        <span>Harness / Contactor R<sub>ext</sub></span>
+                        <span>Harness / Contactor R_ext</span>
                         <span className="text-indigo-400 font-mono font-bold">{params.busbarResistance.toFixed(1)} mΩ</span>
                       </label>
                       <input
@@ -1995,7 +1996,7 @@ export default function App() {
                         <span className="font-mono text-red-400">{qGen.toFixed(1)} W</span>
                       </div>
                       <div className="flex justify-between">
-                        <span>Thermal R<sub>th</sub> & Time Const τ:</span>
+                        <span>Thermal R_th & Time Const τ:</span>
                         <span className="font-mono text-cyan-400">{rTh.toFixed(2)} K/W · {Math.round(tauSec)} s</span>
                       </div>
                     </div>
@@ -2147,7 +2148,7 @@ export default function App() {
                         <td className="px-4 py-3.5 font-mono text-cyan-400">REQ-002</td>
                         <td className="px-4 py-3.5 font-medium text-slate-200">Thermal Safety @ Stated 1C Discharge (25°C Ambient)</td>
                         <td className="px-4 py-3.5 font-mono">≤ {appProfile.maxTemp1CCelsius.toFixed(0)}°C</td>
-                        <td className="px-4 py-3.5 text-slate-400">Size-scaled R<sub>th</sub> ({rTh.toFixed(2)} K/W), τ={Math.round(tauSec)}s ({config.cooling})</td>
+                        <td className="px-4 py-3.5 text-slate-400">Size-scaled R_th ({rTh.toFixed(2)} K/W), τ={Math.round(tauSec)}s ({config.cooling})</td>
                         <td className="px-4 py-3.5 font-mono">
                           {tempAtStated1C <= appProfile.maxTemp1CCelsius ?
                             <span className="bg-emerald-900/50 text-emerald-400 px-2 py-1 rounded border border-emerald-800 font-bold">✓ PASS ({tempAtStated1C.toFixed(1)}°C @1C)</span> :
@@ -2158,7 +2159,7 @@ export default function App() {
                         <td className="px-4 py-3.5 font-mono text-cyan-400">REQ-003</td>
                         <td className="px-4 py-3.5 font-medium text-slate-200">Minimum Usable Energy @ 1C (Net of DoD, Sag & Cutoff)</td>
                         <td className="px-4 py-3.5 font-mono">≥ {appProfile.usableEnergyMinWh} Wh</td>
-                        <td className="px-4 py-3.5 text-slate-400">{packEnergyWh.toFixed(0)}Wh gross × {(currentEval.bms.dodWindow*100).toFixed(0)}% DoD × η<sub>discharge</sub></td>
+                        <td className="px-4 py-3.5 text-slate-400">{packEnergyWh.toFixed(0)}Wh gross × {(currentEval.bms.dodWindow*100).toFixed(0)}% DoD × η_discharge</td>
                         <td className="px-4 py-3.5 font-mono">
                           {usableEnergyAt1CWh >= appProfile.usableEnergyMinWh ?
                             <span className="bg-emerald-900/50 text-emerald-400 px-2 py-1 rounded border border-emerald-800 font-bold">✓ PASS ({usableEnergyAt1CWh.toFixed(0)}Wh)</span> :
@@ -2203,7 +2204,7 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Reconciled Manufacturer Cell Datasheet Table */}
+              {/* Reconciled Manufacturer Cell Datasheet Table (Fixes "Tab is titled Datasheets but shows none") */}
               <div className="bg-slate-900 rounded-md border border-slate-800 overflow-hidden">
                 <div className="px-6 py-4 border-b border-slate-800 bg-slate-800/50">
                   <h2 className="text-base font-semibold text-slate-100">Reconciled Cell Datasheet Register & Provenance (Stage 3 Audit)</h2>
@@ -2245,23 +2246,23 @@ export default function App() {
                     <DollarSign className="w-5 h-5 mr-2 text-emerald-500"/> Throughput Cost & Full LCOS Breakdown (Fixes D8, D12)
                   </h2>
                   <div className="bg-slate-950 p-3.5 rounded border border-slate-800 text-xs text-slate-300 font-mono space-y-1">
-                    <div>CapEx<sub>throughput</sub> = BOM<sub>Cost</sub> / (E<sub>usable,1C</sub> × Cycles<sub>eff</sub> × η<sub>disch</sub>)</div>
-                    <div>Full LCOS = (BOM<sub>Cost</sub> × 1.08<sub>O&amp;M</sub>) / Throughput<sub>kWh</sub> + ($0.09<sub>tariff</sub> / 0.90<sub>RTE</sub>)</div>
+                    <div>CapEx_throughput = BOM_Cost / (E_usable_1C × Cycles_eff × η_disch)</div>
+                    <div>Full_LCOS = (BOM_Cost × 1.08_O&M) / Throughput_kWh + ($0.09_tariff / 0.90_RTE)</div>
                   </div>
                   
-                  <ul className="space-y-2 text-xs text-slate-400">
-                    <li className="flex justify-between"><span>Pack BOM Cost ({costBasis} basis):</span> <strong className="text-slate-200 font-mono">${totalCostEst.toFixed(2)} (${packCostPerKWh.toFixed(0)}/kWh) · {inr(totalCostEst)} ({inr(packCostPerKWh)}/kWh)</strong></li>
-                    <li className="flex justify-between"><span>Usable Energy @ 1C ({(currentEval.bms.dodWindow*100).toFixed(0)}% DoD):</span> <strong className="text-slate-200 font-mono">{(usableEnergyAt1CWh / 1000).toFixed(3)} kWh</strong></li>
-                    <li className="flex justify-between"><span>Temp-Adjusted Cycle Life (to 80% SOH):</span> <strong className="text-slate-200 font-mono">{effectiveCycles} cycles</strong></li>
-                    <li className="flex justify-between border-t border-slate-800 pt-2">
-                      <span className="text-cyan-400">CapEx per kWh Throughput:</span>
-                      <strong className="text-cyan-400 font-mono text-sm">${lcos.toFixed(4)} / kWh · {inr(lcos, 2)} / kWh</strong>
-                    </li>
-                    <li className="flex justify-between">
-                      <span className="text-emerald-400">Full Levelized Cost (incl. Electricity & O&amp;M):</span>
-                      <strong className="text-emerald-400 font-mono text-sm">${fullLcosPerKWh.toFixed(4)} / kWh · {inr(fullLcosPerKWh, 2)} / kWh</strong>
-                    </li>
-                  </ul>
+<ul className="space-y-2 text-xs text-slate-400">
+  <li className="flex justify-between"><span>Pack BOM Cost ({costBasis} basis):</span> <strong className="text-slate-200 font-mono">${totalCostEst.toFixed(2)} (${packCostPerKWh.toFixed(0)}/kWh) · {inr(totalCostEst)} ({inr(packCostPerKWh)}/kWh)</strong></li>
+  <li className="flex justify-between"><span>Usable Energy @ 1C ({(currentEval.bms.dodWindow*100).toFixed(0)}% DoD):</span> <strong className="text-slate-200 font-mono">{(usableEnergyAt1CWh / 1000).toFixed(3)} kWh</strong></li>
+  <li className="flex justify-between"><span>Temp-Adjusted Cycle Life (to 80% SOH):</span> <strong className="text-slate-200 font-mono">{effectiveCycles} cycles</strong></li>
+  <li className="flex justify-between border-t border-slate-800 pt-2">
+    <span className="text-cyan-400">CapEx per kWh Throughput:</span>
+    <strong className="text-cyan-400 font-mono text-sm">${lcos.toFixed(4)} / kWh · {inr(lcos, 2)} / kWh</strong>
+  </li>
+  <li className="flex justify-between">
+    <span className="text-emerald-400">Full Levelized Cost (incl. Electricity & O&M):</span>
+    <strong className="text-emerald-400 font-mono text-sm">${fullLcosPerKWh.toFixed(4)} / kWh · {inr(fullLcosPerKWh, 2)} / kWh</strong>
+  </li>
+</ul>
                 </div>
 
                 <div className="bg-slate-900 rounded-md border border-slate-800 p-6 space-y-4">
@@ -2269,10 +2270,10 @@ export default function App() {
                     Assumptions Register, Limitations & Safe Bench Protocol (C6 / H3)
                   </h2>
                   <ul className="space-y-2 text-xs text-slate-300 leading-relaxed">
-                    <li><strong className="text-cyan-400">Thermal Assumptions:</strong> Lumped thermal capacitance C<sub>th</sub> = m · c<sub>p</sub> (c<sub>p</sub> ≈ 910–980 J/kg·K). Convection coefficients h between 6.5 and 145 W/m²·K are textbook engineering values requiring empirical calibration.</li>
-                    <li><strong className="text-amber-400">External Reference Datasets:</strong> Single-cell fade and thermal rise shape benchmarked against <span className="underline">NASA Ames PCoE 18650 Dataset</span> and <span className="underline">Sandia Battery Archive</span>; ambient range anchored to <span className="underline">IMD Gridded Daily Max Temperature</span>; regulatory rules mapped to <span className="underline">AIS-156 Amendment 3</span>.</li>
-                    <li><strong className="text-emerald-400">Recommended Next Step (Safe Low-Voltage Bench Experiment):</strong> Assemble a scaled <strong>4S2P (≤16.8V)</strong> sub-module inside a vermiculite/sand fireproof tray with a 15A inline blade fuse, 4× 10kΩ NTC thermistors (center vs edge cells), and a current-limited electronic load at 0.5C/1C to measure empirical R<sub>th</sub> and τ within a strict 0–45°C attended window.</li>
-                  </ul>
+  <li><strong className="text-cyan-400">Thermal Assumptions:</strong> Lumped thermal capacitance C_th = m · c_p (c_p ≈ 910–980 J/kg·K). Convection coefficients h between 6.5 and 145 W/m²K are textbook engineering values requiring empirical calibration.</li>
+  <li><strong className="text-amber-400">External Reference Datasets:</strong> Single-cell fade and thermal rise shape benchmarked against <span className="underline">NASA Ames PCoE 18650 Dataset</span> and <span className="underline">Sandia Battery Archive</span>; ambient range anchored to <span className="underline">IMD Gridded Daily Max Temperature</span>; regulatory rules mapped to <span className="underline">AIS-156 Amendment 3</span>.</li>
+  <li><strong className="text-emerald-400">Recommended Next Step (Safe Low-Voltage Bench Experiment):</strong> Assemble a scaled <strong>4S2P (≤16.8V)</strong> sub-module inside a vermiculite/sand fireproof tray with a 15A inline blade fuse, 4× 10kΩ NTC thermistors (center vs edge cells), and a current-limited electronic load at 0.5C/1C to measure empirical R_th and τ within a strict 0–45°C attended window.</li>
+</ul>
                 </div>
               </div>
             </div>
@@ -2287,7 +2288,7 @@ export default function App() {
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <div>
                 <h3 className="text-base font-bold text-white">Traceable Engineering Report</h3>
-                <p className="text-xs text-slate-400">Copied to clipboard</p>
+                <p className="text-xs text-slate-400">Copied to clipboard </p>
               </div>
               <button
                 type="button"
