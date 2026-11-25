@@ -7,7 +7,7 @@ import {
 import {
   Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
-  LineChart, Line, ScatterChart, Scatter, ZAxis, ReferenceLine
+  LineChart, Line, ScatterChart, Scatter, ZAxis, ReferenceLine, ReferenceDot
 } from 'recharts';
 
 // ============================================================================
@@ -1116,13 +1116,11 @@ React.useEffect(() => {
     const { name, value } = e.target;
     if (name === 'simMode') {
       setParams(prev => ({ ...prev, simMode: value }));
-      if (simData.length > 0) runSimulation(value, 'simMode');
       return;
     }
     const numVal = parseFloat(value);
     const safeVal = Number.isNaN(numVal) ? 0 : numVal;
     setParams(prev => ({ ...prev, [name]: safeVal }));
-    if (simData.length > 0) runSimulation(safeVal, name);
   };
 
   const loadKneeIntoOptionA = () => {
@@ -1295,8 +1293,9 @@ React.useEffect(() => {
         ? Math.min(95, currentSoc + dSoc)
         : Math.max(0, currentSoc - dSoc);
 
-      // Stop simulation on BMS cutoff or thermal trip
-      if ((mode !== 'charge' && V_load <= V_min_pack) || currentTemp >= currentParams.bmsTempTrip || (mode !== 'charge' && currentSoc <= 0)) {
+      // Stop on BMS voltage cutoff, thermal trip, or the usable-energy window (Legacy mode uses the full pack)
+      const socFloor = modelMode === 'legacy' ? 0 : (1 - activeEval.bms.dodWindow) * 100;
+      if ((mode !== 'charge' && V_load <= V_min_pack) || currentTemp >= currentParams.bmsTempTrip || (mode !== 'charge' && currentSoc <= socFloor)) {
         break;
       }
     }
@@ -1304,6 +1303,58 @@ React.useEffect(() => {
     setSimData(data);
     setTimeout(() => setIsSimulating(false), 180);
   };
+
+  // Run the simulation automatically when the tab opens or any input changes
+  React.useEffect(() => {
+    if (activeTab === 'bms') runSimulation();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, application, designSelection, allAppDesigns, params, modelMode, costBasis]);
+
+  // ---- Simulation chart helpers (axes, limits, result cards, stop reason) ----
+  const simLast = simData.length > 0 ? simData[simData.length - 1] : null;
+  const simShowCutoff = params.simMode !== 'charge';
+  const simTempLimit = Math.min(params.bmsTempTrip, appProfile.maxTemp1CCelsius + 3);
+  const simCutoffV = seriesCount * params.bmsVoltCutoff;
+
+  const simMaxTime = simLast ? simLast.time : 60;
+  const simTimeStep = simMaxTime <= 15 ? 2 : simMaxTime <= 30 ? 5 : simMaxTime <= 75 ? 10 : simMaxTime <= 150 ? 20 : 30;
+  const simTimeEnd = Math.max(simTimeStep, Math.ceil(simMaxTime / simTimeStep) * simTimeStep);
+  const simTimeTicks = Array.from({ length: Math.round(simTimeEnd / simTimeStep) + 1 }, (_, i) => i * simTimeStep);
+
+  const simVoltages = simData.map(d => d.voltage);
+  const simTemps = simData.map(d => d.temperature);
+  const simVLow = simLast ? Math.floor(Math.min(...simVoltages, simShowCutoff ? simCutoffV : Infinity) - 1) : 0;
+  const simVHigh = simLast ? Math.ceil(Math.max(...simVoltages) + 1) : 60;
+  const simTLow = simLast ? Math.floor(Math.min(...simTemps, params.ambientTemp) - 3) : 0;
+  const simTHigh = simLast ? Math.ceil(Math.max(...simTemps, simTempLimit) + 3) : 80;
+
+  const simStats = (() => {
+    if (!simLast) return null;
+    let energyWh = 0;
+    for (let i = 1; i < simData.length; i++) {
+      const dtH = (simData[i].time - simData[i - 1].time) / 60;
+      energyWh += ((simData[i].voltage * simData[i].currentA + simData[i - 1].voltage * simData[i - 1].currentA) / 2) * dtH;
+    }
+    return { runtimeMin: simLast.time, energyWh, minV: Math.min(...simVoltages), maxV: Math.max(...simVoltages), peakTemp: Math.max(...simTemps) };
+  })();
+
+  const simStop = (() => {
+    if (!simLast) return null;
+    const mins = Math.round(simLast.time);
+    if (simLast.temperature >= params.bmsTempTrip) {
+      return { tone: 'bad', text: `Stopped at ${mins} min: the pack reached the ${params.bmsTempTrip} °C over-temperature trip.` };
+    }
+    if (params.simMode !== 'charge' && simLast.voltage <= simCutoffV + 0.05) {
+      return { tone: 'volt', text: `Stopped at ${mins} min: the pack reached the ${simCutoffV.toFixed(1)} V under-voltage cutoff with ${simLast.soc.toFixed(1)}% charge left.` };
+    }
+    if (params.simMode !== 'charge' && modelMode !== 'legacy' && simLast.soc <= (1 - currentEval.bms.dodWindow) * 100 + 5) {
+      return { tone: 'ok', text: `Stopped at ${mins} min: the usable-energy limit was reached (${(currentEval.bms.dodWindow * 100).toFixed(0)}% depth of discharge).` };
+    }
+    if (params.simMode === 'charge') {
+      return { tone: 'ok', text: `Charged from 10% to ${simLast.soc.toFixed(0)}% in ${mins} min.` };
+    }
+    return { tone: 'ok', text: `Run completed in ${mins} min with ${simLast.soc.toFixed(1)}% charge left.` };
+  })();
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-300 font-sans flex flex-col">
@@ -2023,31 +2074,65 @@ React.useEffect(() => {
                       <Zap className="w-5 h-5 mr-2 text-yellow-500"/>
                       {params.simMode === 'charge' ? 'CC-CV Charge Profile' : params.simMode === 'wmtc' ? 'WMTC Scooter Duty Cycle Profile' : 'Transient Discharge Cycle Profile'}
                     </h2>
-                    {simData.length > 0 && (
-                      <span className="text-xs font-mono text-slate-400">
-                        Duration: {simData[simData.length - 1].time.toFixed(1)} mins | End Temp: {simData[simData.length - 1].temperature}°C
-                      </span>
-                    )}
                   </div>
 
-                  {/* Stacked Non-Overlapping Termination Banners (Fixes D10) */}
-                  {simData.length > 0 && (
+                  {/* Plain-language stop reason + datasheet warning */}
+                  {simLast && (
                     <div className="flex flex-wrap gap-2 mb-3">
-                      {simData[simData.length - 1].temperature >= params.bmsTempTrip && (
-                        <div className="bg-red-950/80 text-red-300 text-xs px-3 py-1.5 rounded border border-red-800 flex items-center font-mono">
-                          ✗ Terminated: BMS Over-Temperature Cutoff ({simData[simData.length - 1].temperature}°C ≥ {params.bmsTempTrip}°C)
-                        </div>
-                      )}
-                      {params.simMode !== 'charge' && simData[simData.length - 1].voltage <= (seriesCount * params.bmsVoltCutoff + 0.05) && (
-                        <div className="bg-blue-950/80 text-blue-300 text-xs px-3 py-1.5 rounded border border-blue-800 flex items-center font-mono">
-                          ⚡ Terminated: BMS Under-Voltage Cutoff ({simData[simData.length - 1].voltage}V ≤ {(seriesCount * params.bmsVoltCutoff).toFixed(1)}V at {simData[simData.length - 1].soc}% SOC)
+                      {simStop && (
+                        <div className={`text-xs px-3 py-1.5 rounded border flex items-center ${
+                          simStop.tone === 'bad'
+                            ? 'bg-red-950/80 text-red-300 border-red-800'
+                            : simStop.tone === 'volt'
+                            ? 'bg-blue-950/80 text-blue-300 border-blue-800'
+                            : 'bg-emerald-950/80 text-emerald-300 border-emerald-700'
+                        }`}>
+                          {simStop.text}
                         </div>
                       )}
                       {currentEval.cellCurrentA > cell.maxContDischargeA && (
-                        <div className="bg-amber-950/80 text-amber-300 text-xs px-3 py-1.5 rounded border border-amber-800 flex items-center font-mono">
-                          ⚠ Datasheet Warning: Cell current ({currentEval.cellCurrentA.toFixed(1)}A) exceeds {cell.fullName} continuous rating ({cell.maxContDischargeA}A)
+                        <div className="bg-amber-950/80 text-amber-300 text-xs px-3 py-1.5 rounded border border-amber-800 flex items-center">
+                          Datasheet warning: cell current ({currentEval.cellCurrentA.toFixed(1)} A) exceeds the {cell.fullName} continuous rating ({cell.maxContDischargeA} A).
                         </div>
                       )}
+                    </div>
+                  )}
+
+                  {/* Result cards */}
+                  {simStats && (
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                      {[
+                        {
+                          label: 'Runtime',
+                          value: `${simStats.runtimeMin.toFixed(1)} min`,
+                          sub: params.simMode === 'charge' ? 'CC-CV charge' : params.simMode === 'wmtc' ? 'WMTC urban cycle' : `Constant ${params.cRate.toFixed(1)} C`,
+                          bad: false
+                        },
+                        {
+                          label: params.simMode === 'charge' ? 'Energy added' : 'Energy delivered',
+                          value: `${Math.round(simStats.energyWh).toLocaleString()} Wh`,
+                          sub: params.simMode === 'charge' ? `10% → ${simLast.soc.toFixed(0)}% charge` : `Down to ${simLast.soc.toFixed(1)}% charge`,
+                          bad: false
+                        },
+                        {
+                          label: params.simMode === 'charge' ? 'Highest voltage' : 'Lowest voltage',
+                          value: `${(params.simMode === 'charge' ? simStats.maxV : simStats.minV).toFixed(1)} V`,
+                          sub: params.simMode === 'charge' ? `Max ${(seriesCount * cell.vMax).toFixed(1)} V` : `Cutoff ${simCutoffV.toFixed(1)} V`,
+                          bad: false
+                        },
+                        {
+                          label: 'Peak temperature',
+                          value: `${simStats.peakTemp.toFixed(1)} °C`,
+                          sub: `Limit ≤ ${simTempLimit} °C`,
+                          bad: simStats.peakTemp > simTempLimit
+                        }
+                      ].map(k => (
+                        <div key={k.label} className="bg-slate-950 border border-slate-800 rounded p-3">
+                          <p className="text-[11px] text-slate-500">{k.label}</p>
+                          <p className="text-xl font-bold text-slate-100 mt-0.5">{k.value}</p>
+                          <p className={`text-[11px] mt-0.5 ${k.bad ? 'text-rose-400' : 'text-slate-500'}`}>{k.sub}</p>
+                        </div>
+                      ))}
                     </div>
                   )}
 
@@ -2058,20 +2143,46 @@ React.useEffect(() => {
                       <p className="text-xs text-slate-600 mt-1">Supports Constant C-Rate, UNECE WMTC Urban Cycle, and CC-CV Fast Charging</p>
                     </div>
                   ) : (
-                    <div className="h-[340px] w-full relative">
+                    <div className="h-[390px] w-full relative">
                       <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={simData} margin={{ top: 10, right: 25, left: 0, bottom: 5 }}>
-                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" />
-                          <XAxis dataKey="time" type="number" domain={['dataMin', 'dataMax']} name="Time" unit="m" tick={{ fill: '#94a3b8', fontSize: 11 }} stroke="#334155" />
-                          <YAxis yAxisId="left" domain={['auto', 'auto']} tick={{ fill: '#38bdf8', fontSize: 11 }} stroke="#38bdf8" />
-                          <YAxis yAxisId="right" orientation="right" domain={[0, Math.max(80, params.bmsTempTrip + 10)]} tick={{ fill: '#f87171', fontSize: 11 }} stroke="#f87171" />
+                        <LineChart data={simData} margin={{ top: 8, right: 8, left: 4, bottom: 28 }}>
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#94a3b8" strokeOpacity={0.25} />
+                          <XAxis
+                            dataKey="time" type="number" domain={[0, simTimeEnd]} ticks={simTimeTicks}
+                            tick={{ fill: '#64748b', fontSize: 11 }} stroke="#94a3b8" tickLine={false}
+                            label={{ value: 'Time (min)', position: 'insideBottom', offset: -14, fill: '#64748b', fontSize: 11 }}
+                          />
+                          <YAxis
+                            yAxisId="left" domain={[simVLow, simVHigh]} allowDecimals={false} width={56}
+                            tick={{ fill: '#64748b', fontSize: 11 }} tickLine={false} axisLine={false}
+                            label={{ value: 'Pack voltage (V)', angle: -90, position: 'insideLeft', fill: '#64748b', fontSize: 11, style: { textAnchor: 'middle' } }}
+                          />
+                          <YAxis
+                            yAxisId="right" orientation="right" domain={[simTLow, simTHigh]} allowDecimals={false} width={56}
+                            tick={{ fill: '#64748b', fontSize: 11 }} tickLine={false} axisLine={false}
+                            label={{ value: 'Temperature (°C)', angle: 90, position: 'insideRight', fill: '#64748b', fontSize: 11, style: { textAnchor: 'middle' } }}
+                          />
                           <Tooltip
                             contentStyle={{ backgroundColor: '#020617', border: '1px solid #1e293b', color: '#f8fafc', fontSize: '12px' }}
-                            labelFormatter={(value) => `Time: ${value} mins`}
+                            labelFormatter={(value) => `Time: ${value} min`}
                           />
-                          <Legend wrapperStyle={{ color: '#94a3b8', fontSize: '12px' }}/>
-                          <Line yAxisId="left" type="monotone" dataKey="voltage" name="Pack Terminal Voltage (V)" stroke="#38bdf8" strokeWidth={2} dot={false} isAnimationActive={false} />
-                          <Line yAxisId="right" type="monotone" dataKey="temperature" name="Pack Temperature (°C)" stroke="#f87171" strokeWidth={2} dot={false} isAnimationActive={false} />
+                          <Legend verticalAlign="top" height={30} wrapperStyle={{ color: '#64748b', fontSize: '12px' }} />
+                          {simShowCutoff && (
+                            <ReferenceLine
+                              yAxisId="left" y={simCutoffV} stroke="#94a3b8" strokeDasharray="5 4"
+                              label={{ value: `Cutoff ${simCutoffV.toFixed(1)} V`, position: 'insideBottomLeft', fill: '#64748b', fontSize: 11 }}
+                            />
+                          )}
+                          <ReferenceLine
+                            yAxisId="right" y={simTempLimit} stroke="#94a3b8" strokeDasharray="5 4"
+                            label={{ value: `Temp limit ${simTempLimit} °C`, position: 'insideTopLeft', fill: '#64748b', fontSize: 11 }}
+                          />
+                          <Line yAxisId="left" type="monotone" dataKey="voltage" name="Pack voltage (V)" stroke="#38bdf8" strokeWidth={2} dot={false} isAnimationActive={false} />
+                          <Line yAxisId="right" type="monotone" dataKey="temperature" name="Pack temperature (°C)" stroke="#f87171" strokeWidth={2} dot={false} isAnimationActive={false} />
+                          <ReferenceDot
+                            yAxisId="left" x={simLast.time} y={simLast.voltage} r={5} fill="#38bdf8" stroke="#ffffff" strokeWidth={2}
+                            label={{ value: `${Math.round(simLast.time)} min`, position: 'top', fill: '#64748b', fontSize: 11 }}
+                          />
                         </LineChart>
                       </ResponsiveContainer>
                     </div>
