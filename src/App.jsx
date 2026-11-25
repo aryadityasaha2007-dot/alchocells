@@ -1301,19 +1301,20 @@ const applyRuleFix = (rule) => {
   };
 const exportSummary = () => {
     try {
+      // WinAnsi-safe text sanitizer (preserves real ° degree symbol via \260)
       const sanitize = (str) =>
         String(str ?? '')
           .replace(/₹/g, 'INR ')
           .replace(/≤/g, '<=')
           .replace(/≥/g, '>=')
-          .replace(/°/g, ' deg ')
           .replace(/×/g, 'x')
           .replace(/—|–/g, '-')
           .replace(/•|·/g, '|')
-          .replace(/[^\x20-\x7E]/g, '')
           .replace(/\\/g, '\\\\')
           .replace(/\(/g, '\\(')
-          .replace(/\)/g, '\\)');
+          .replace(/\)/g, '\\)')
+          .replace(/°/g, '\\260')
+          .replace(/[^\x20-\x7E\\]/g, (ch) => (ch === '\\' ? '\\' : ''));
 
       const wrapText = (str, maxChars) => {
         const clean = String(str ?? '');
@@ -1335,141 +1336,131 @@ const exportSummary = () => {
 
       const ev = currentEval || {};
       const ops = [];
+      const L = 44;   // Left margin
+      const R = 551;  // Right margin (usable width = 507 pt)
 
-      // Drawing helpers (A4 = 595 x 842 pt, margins = 36 pt, usable width = 523 pt)
-      const rectFill = (x, y, w, h, rgb) => {
-        ops.push(`${rgb} rg ${x} ${y} ${w} ${h} re f`);
+      // Fonts: /F1 = Helvetica, /F2 = Helvetica-Bold, /F3 = Times-Roman, /F4 = Times-Bold, /F5 = Courier-Bold
+      const line = (x1, y1, x2, y2, lw = 0.6, gray = '0.15') => {
+        ops.push(`${lw} w ${gray} G ${x1} ${y1} m ${x2} ${y2} l S`);
       };
-      const rectStroke = (x, y, w, h, rgb, lw = 0.6) => {
-        ops.push(`${lw} w ${rgb} RG ${x} ${y} ${w} ${h} re S`);
-      };
-      const lineStroke = (x1, y1, x2, y2, rgb, lw = 0.8) => {
-        ops.push(`${lw} w ${rgb} RG ${x1} ${y1} m ${x2} ${y2} l S`);
-      };
-      const drawText = (text, x, y, size = 9.5, bold = false, rgb = '0.10 0.14 0.20') => {
-        const font = bold ? '/F2' : '/F1';
-        ops.push(`${rgb} rg BT ${font} ${size} Tf ${x} ${y} Td (${sanitize(text)}) Tj ET`);
+      const text = (str, x, y, size = 9.5, font = '/F3', rgb = '0.08 0.08 0.10') => {
+        ops.push(`${rgb} rg BT ${font} ${size} Tf ${x} ${y} Td (${sanitize(str)}) Tj ET`);
       };
 
       // =========================================================================
-      // 1. HEADER BANNER WITH VECTOR ALCHOCELLS PULSE LOGO
+      // 1. TECHNICAL DOCUMENT MASTHEAD (White Paper / Datasheet Style)
       // =========================================================================
-      rectFill(0, 762, 595, 80, '0.06 0.09 0.16'); // Dark slate-900 header
-      rectFill(0, 759, 595, 3, '0.02 0.71 0.83');  // Cyan-500 accent bar
+      // Minimalist vector pulse mark on white background
+      ops.push('1.4 w 1 J 1 j 0.05 0.35 0.45 RG 44 794 m 50 794 l 54 804 l 59 783 l 63 798 l 69 794 l S');
+      text('AlchoCells', 76, 790, 16, '/F2', '0.06 0.08 0.12');
+      text('BATTERY PACK ENGINEERING SPECIFICATION & VERIFICATION REPORT', 76, 777, 8, '/F2', '0.35 0.40 0.46');
 
-      // Vector Logo Badge (rounded cyan-tinted box + ECG/Activity pulse polyline)
-      rectFill(36, 780, 34, 34, '0.08 0.18 0.26');
-      rectStroke(36, 780, 34, 34, '0.13 0.83 0.93', 1.1);
-      ops.push('2.0 w 1 J 1 j 0.13 0.83 0.93 RG 41 797 m 46 797 l 50 807 l 55 786 l 59 801 l 64 797 l S');
+      // Right-aligned Document Control Block
+      const docCode = `DOC ID: AC-${seriesCount}S${parallelCount}P-${new Date().getFullYear()}`;
+      const dateStr = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+      text(docCode, 425, 797, 8, '/F5', '0.15 0.18 0.22');
+      text(`DATE:   ${dateStr}`, 425, 787, 8, '/F5', '0.25 0.28 0.32');
+      text(`SOLVER: ${modelMode === 'physics' ? 'PHYSICS-REV2' : 'LEGACY'}`, 425, 777, 8, '/F5', '0.25 0.28 0.32');
 
-      // Brand Title & Tagline
-      drawText('AlchoCells', 80, 799, 18, true, '1 1 1');
-      drawText('BATTERY PACK ENGINEERING & SIMULATION DOSSIER', 80, 784, 8.5, true, '0.40 0.87 0.96');
-      drawText('Simulate First. Build Next.', 80, 772, 8, false, '0.65 0.73 0.82');
+      line(L, 768, R, 768, 1.4, '0.08');
+      line(L, 765, R, 765, 0.4, '0.35');
 
-      // Right-aligned Report Metadata
-      const dateStr = new Date().toLocaleDateString('en-IN', { dateStyle: 'medium' });
-      drawText(`Date: ${dateStr}`, 435, 801, 8.5, false, '0.85 0.90 0.95');
-      drawText(`Solver: ${modelMode === 'physics' ? 'Physics-Corrected' : 'Legacy'}`, 435, 788, 8.5, false, '0.85 0.90 0.95');
-      drawText(`Pricing: ${costBasis.toUpperCase()} (${currency})`, 435, 775, 8.5, true, '0.40 0.87 0.96');
-
-      // Configuration Title Strip
-      let y = 736;
-      rectFill(36, y - 6, 523, 24, '0.94 0.97 0.99');
-      rectStroke(36, y - 6, 523, 24, '0.80 0.87 0.92', 0.6);
-      drawText(
-        `ACTIVE DESIGN: ${seriesCount}S${parallelCount}P ${cell?.fullName || config.cellChemistry}   |   APPLICATION: ${config.application}`,
-        44,
-        y + 2,
-        9.5,
-        true,
-        '0.06 0.22 0.36'
+      // Paper Title & Abstract / Scope Line
+      let y = 747;
+      text(
+        `Technical Dossier: ${seriesCount}S${parallelCount}P ${cell?.fullName || config.cellChemistry} Pack Architecture`,
+        L,
+        y,
+        12.5,
+        '/F4',
+        '0.05 0.05 0.08'
+      );
+      y -= 14;
+      text(
+        `Target Application: ${config.application}   |   Cost Basis: ${costBasis.toUpperCase()} (${currency})   |   Ambient: ${params.ambientTemp}°C`,
+        L,
+        y,
+        8.8,
+        '/F3',
+        '0.28 0.32 0.38'
       );
 
       // =========================================================================
-      // 2. SECTION 1: EXECUTIVE KPI GRID (2 ROWS x 4 CARDS)
+      // SECTION I. KEY PERFORMANCE & PHYSICAL PARAMETERS (Booktabs Style Table)
       // =========================================================================
-      y -= 26;
-      drawText('1. EXECUTIVE PERFORMANCE & PACK SUMMARY', 36, y, 10.5, true, '0.04 0.45 0.58');
-      lineStroke(36, y - 4, 559, y - 4, '0.82 0.86 0.90', 0.7);
-      y -= 12;
+      y -= 24;
+      text('I. EXECUTIVE PERFORMANCE & PHYSICAL PARAMETERS', L, y, 9.5, '/F2', '0.06 0.08 0.12');
+      y -= 5;
+      line(L, y, R, y, 1.0, '0.10');
 
-      const kpis = [
-        { label: 'NOMINAL BUS', val: `${Number(packVoltage || 0).toFixed(1)} V`, sub: `${Number(packCapacity || 0).toFixed(1)} Ah (${totalCells} cells)` },
-        { label: 'USABLE ENERGY (1C)', val: `${Math.round(usableEnergyAt1CWh || 0).toLocaleString()} Wh`, sub: `Target >= ${appProfile?.usableEnergyMinWh ?? '-'} Wh` },
-        { label: 'PEAK TEMP (1C)', val: `${Number(steadyPeakTemp || 0).toFixed(1)} deg C`, sub: `Limit <= ${Math.min(params.bmsTempTrip, (appProfile?.maxTemp1CCelsius ?? 55) + 3)} deg C` },
-        { label: 'TOTAL PACK MASS', val: `${Number(totalMassEst || 0).toFixed(2)} kg`, sub: `Limit <= ${appProfile?.maxMassKg ?? '-'} kg` },
-        { label: 'ENVELOPE & VOL', val: `${Number(packVolumeLiters || 0).toFixed(1)} L`, sub: `${lengthMm}x${widthMm}x${heightMm} mm` },
-        { label: 'CHARGE (10-90%)', val: `${chargeTimeMinutes} min`, sub: `Limit <= ${appProfile?.maxChargeTimeMin ?? '-'} min` },
-        { label: 'CYCLE LIFE (80%)', val: `${Number(effectiveCycles || 0).toLocaleString()} cyc`, sub: `Full LCOS: ${money(fullLcosPerKWh, 2)}/kWh` },
-        { label: 'TOTAL BOM COST', val: `${money(totalCostEst)}`, sub: `${money(packCostPerKWh)} / kWh` }
+      const tempLimit = Math.min(params.bmsTempTrip, (appProfile?.maxTemp1CCelsius ?? 55) + 3);
+      const perfRows = [
+        ['Nominal Bus Voltage', `${Number(packVoltage || 0).toFixed(1)} V`, 'Rated Pack Capacity', `${Number(packCapacity || 0).toFixed(1)} Ah (${totalCells} cells)`],
+        ['Usable Energy (1C)', `${Math.round(usableEnergyAt1CWh || 0).toLocaleString()} Wh (Target >= ${appProfile?.usableEnergyMinWh ?? '-'} Wh)`, 'Peak Cell Temp (1C)', `${Number(steadyPeakTemp || 0).toFixed(1)}°C (Limit <= ${tempLimit}°C)`],
+        ['Total Pack Mass', `${Number(totalMassEst || 0).toFixed(2)} kg (Limit <= ${appProfile?.maxMassKg ?? '-'} kg)`, 'Envelope & Volume', `${lengthMm} x ${widthMm} x ${heightMm} mm (${Number(packVolumeLiters || 0).toFixed(1)} L)`],
+        ['CC-CV Charge (10-90%)', `${chargeTimeMinutes} min (Limit <= ${appProfile?.maxChargeTimeMin ?? '-'} min)`, 'Cycle Life (80% SOH)', `${Number(effectiveCycles || 0).toLocaleString()} cycles`],
+        ['Estimated BOM Cost', `${money(totalCostEst)} (${money(packCostPerKWh)}/kWh)`, 'Levelized Cost (LCOS)', `${money(fullLcosPerKWh, 2)} / kWh`]
       ];
 
-      const cardW = 126;
-      const cardH = 42;
-      const gapX = 6.3;
-      kpis.forEach((k, idx) => {
-        const col = idx % 4;
-        const row = Math.floor(idx / 4);
-        const cx = 36 + col * (cardW + gapX);
-        const cy = y - cardH - row * (cardH + 6);
-        rectFill(cx, cy, cardW, cardH, '0.97 0.98 0.99');
-        rectStroke(cx, cy, cardW, cardH, '0.84 0.88 0.92', 0.6);
-        drawText(k.label, cx + 7, cy + 30, 7.2, true, '0.38 0.45 0.53');
-        drawText(k.val, cx + 7, cy + 16, 11, true, '0.07 0.11 0.18');
-        drawText(k.sub, cx + 7, cy + 5, 7.5, false, '0.32 0.39 0.47');
+      perfRows.forEach((row, idx) => {
+        y -= 17;
+        text(row[0], L + 2, y, 8.8, '/F4', '0.15 0.18 0.22');
+        text(row[1], L + 112, y, 8.8, '/F3', '0.08 0.08 0.10');
+        text(row[2], L + 275, y, 8.8, '/F4', '0.15 0.18 0.22');
+        text(row[3], L + 382, y, 8.8, '/F3', '0.08 0.08 0.10');
+        if (idx < perfRows.length - 1) line(L, y - 5, R, y - 5, 0.25, '0.82');
       });
-
-      y -= cardH * 2 + 24;
+      y -= 6;
+      line(L, y, R, y, 1.0, '0.10');
 
       // =========================================================================
-      // 3. SECTION 2: SUBSYSTEM BILL OF MATERIALS TABLE
+      // SECTION II. SUBSYSTEM BILL OF MATERIALS & ARCHITECTURE
       // =========================================================================
-      drawText('2. SUBSYSTEM BILL OF MATERIALS & ARCHITECTURE', 36, y, 10.5, true, '0.04 0.45 0.58');
-      lineStroke(36, y - 4, 559, y - 4, '0.82 0.86 0.90', 0.7);
-      y -= 10;
+      y -= 22;
+      text('II. SUBSYSTEM BILL OF MATERIALS & ARCHITECTURE', L, y, 9.5, '/F2', '0.06 0.08 0.12');
+      y -= 5;
+      line(L, y, R, y, 1.0, '0.10');
 
       const rIntVal = cell?.internalResMOhm ?? cell?.rIntMOhm ?? cell?.internalRes ?? ev.cell?.internalResMOhm ?? '';
       const bomRows = [
-        ['Cell Chemistry', `${cell?.fullName || config.cellChemistry} (${cell?.voltage ?? ''} V, ${cell?.capacity ?? ''} Ah${rIntVal ? `, ${rIntVal} mOhm` : ''})`],
-        ['Interconnect Busbars', `${config.busbars}${ev.busbar?.ampLimitPerBranch ? ` (Branch limit: ${ev.busbar.ampLimitPerBranch} A)` : ''}`],
-        ['Thermal Management', `${config.cooling}${ev.rTh ? ` (R_th = ${Number(ev.rTh).toFixed(2)} K/W, tau = ${Math.round(ev.tauSec || 0)} s)` : ''}`],
-        ['Spacing & Enclosure', `${config.spacing}${ev.spacing?.gapMm != null ? ` (${ev.spacing.gapMm} mm inter-cell gap)` : ''}`],
-        ['BMS Architecture', `${config.bmsTier} (Cutoff: ${params.bmsVoltCutoff} V/cell, Thermal Trip: ${params.bmsTempTrip} deg C)`]
+        ['Cell Chemistry', `${cell?.fullName || config.cellChemistry}  -  ${cell?.voltage ?? ''} V nominal, ${cell?.capacity ?? ''} Ah${rIntVal ? `, ${rIntVal} mOhm DCIR` : ''}`],
+        ['Interconnect Busbars', `${config.busbars}${ev.busbar?.ampLimitPerBranch ? `  (Continuous branch rating: ${ev.busbar.ampLimitPerBranch} A)` : ''}`],
+        ['Thermal Management', `${config.cooling}${ev.rTh ? `  (R_th = ${Number(ev.rTh).toFixed(2)} K/W, thermal time constant tau = ${Math.round(ev.tauSec || 0)} s)` : ''}`],
+        ['Cell Spacing & Housing', `${config.spacing}${ev.spacing?.gapMm != null ? `  (${ev.spacing.gapMm} mm inter-cell propagation gap)` : ''}`],
+        ['BMS Protection Tier', `${config.bmsTier}  (UV cutoff: ${params.bmsVoltCutoff} V/cell, OT trip: ${params.bmsTempTrip}°C)`]
       ];
 
-      bomRows.forEach((row, i) => {
-        const rh = 18;
-        y -= rh;
-        if (i % 2 === 0) rectFill(36, y, 523, rh, '0.96 0.98 0.99');
-        rectStroke(36, y, 523, rh, '0.86 0.89 0.92', 0.4);
-        drawText(row[0], 43, y + 5, 8.8, true, '0.20 0.26 0.34');
-        drawText(row[1], 185, y + 5, 8.8, false, '0.10 0.14 0.20');
+      bomRows.forEach((row, idx) => {
+        y -= 16;
+        text(row[0], L + 2, y, 8.8, '/F4', '0.15 0.18 0.22');
+        text(row[1], L + 125, y, 8.8, '/F3', '0.08 0.08 0.10');
+        if (idx < bomRows.length - 1) line(L, y - 4.5, R, y - 4.5, 0.25, '0.82');
       });
-
-      y -= 20;
+      y -= 6;
+      line(L, y, R, y, 1.0, '0.10');
 
       // =========================================================================
-      // 4. SECTION 3: MULTI-OPTION TRADE-OFF COMPARISON TABLE
+      // SECTION III. COMPARATIVE DESIGN TRADE-OFF MATRIX
       // =========================================================================
-      drawText('3. MULTI-OPTION TRADE-OFF COMPARISON', 36, y, 10.5, true, '0.04 0.45 0.58');
-      lineStroke(36, y - 4, 559, y - 4, '0.82 0.86 0.90', 0.7);
-      y -= 10;
+      y -= 22;
+      text('III. COMPARATIVE DESIGN TRADE-OFF MATRIX', L, y, 9.5, '/F2', '0.06 0.08 0.12');
+      y -= 5;
+      line(L, y, R, y, 1.0, '0.10');
 
-      // Table Header
-      y -= 18;
-      rectFill(36, y, 523, 18, '0.10 0.16 0.25');
+      y -= 14;
       const cols = [
-        { label: 'DESIGN SLOT', x: 42 },
-        { label: 'CONFIGURATION', x: 112 },
-        { label: 'ENERGY', x: 258 },
-        { label: 'TEMP', x: 315 },
-        { label: 'MASS', x: 365 },
-        { label: 'CHARGE', x: 412 },
-        { label: 'CYCLES', x: 460 },
-        { label: 'BOM COST', x: 505 }
+        { label: 'Variant', x: L + 2 },
+        { label: 'Topology & Cell', x: L + 64 },
+        { label: 'Energy', x: L + 218 },
+        { label: 'Temp (1C)', x: L + 272 },
+        { label: 'Mass', x: L + 328 },
+        { label: 'Charge', x: L + 375 },
+        { label: 'Cycles', x: L + 422 },
+        { label: 'BOM Cost', x: L + 465 }
       ];
-      cols.forEach((c) => drawText(c.label, c.x, y + 5, 7.5, true, '1 1 1'));
+      cols.forEach((c) => text(c.label, c.x, y, 8.3, '/F2', '0.12 0.15 0.20'));
+      y -= 5;
+      line(L, y, R, y, 0.5, '0.25');
 
       [
         { tag: 'Baseline', item: evalBaseline },
@@ -1477,71 +1468,71 @@ const exportSummary = () => {
         { tag: 'Option B', item: evalOptionB }
       ].forEach(({ tag, item }, idx) => {
         if (!item) return;
-        y -= 18;
-        if (idx % 2 === 1) rectFill(36, y, 523, 18, '0.96 0.98 0.99');
-        rectStroke(36, y, 523, 18, '0.86 0.89 0.92', 0.4);
-        drawText(tag, 42, y + 5, 8.5, true, '0.10 0.14 0.20');
-        drawText(`${item.seriesCount}S${item.parallelCount}P ${item.design?.cellChemistry || ''}`, 112, y + 5, 8.3, false, '0.15 0.20 0.28');
-        drawText(`${Math.round(item.usableEnergyAt1CWh || 0)} Wh`, 258, y + 5, 8.3, false, '0.15 0.20 0.28');
-        drawText(`${Number(item.tempAtStated1C || 0).toFixed(1)} C`, 315, y + 5, 8.3, false, '0.15 0.20 0.28');
-        drawText(`${Number(item.totalMassEst || 0).toFixed(2)} kg`, 365, y + 5, 8.3, false, '0.15 0.20 0.28');
-        drawText(`${item.chargeTimeMinutes} min`, 412, y + 5, 8.3, false, '0.15 0.20 0.28');
-        drawText(`${item.effectiveCycles}`, 460, y + 5, 8.3, false, '0.15 0.20 0.28');
-        drawText(`${money(item.totalCostEst)}`, 505, y + 5, 8.3, true, '0.06 0.35 0.45');
+        y -= 16;
+        text(tag, L + 2, y, 8.6, '/F4', '0.10 0.12 0.16');
+        text(`${item.seriesCount}S${item.parallelCount}P ${item.design?.cellChemistry || ''}`, L + 64, y, 8.6, '/F3', '0.10 0.12 0.16');
+        text(`${Math.round(item.usableEnergyAt1CWh || 0)} Wh`, L + 218, y, 8.6, '/F3', '0.10 0.12 0.16');
+        text(`${Number(item.tempAtStated1C || 0).toFixed(1)}°C`, L + 272, y, 8.6, '/F3', '0.10 0.12 0.16');
+        text(`${Number(item.totalMassEst || 0).toFixed(2)} kg`, L + 328, y, 8.6, '/F3', '0.10 0.12 0.16');
+        text(`${item.chargeTimeMinutes} min`, L + 375, y, 8.6, '/F3', '0.10 0.12 0.16');
+        text(`${item.effectiveCycles}`, L + 422, y, 8.6, '/F3', '0.10 0.12 0.16');
+        text(`${money(item.totalCostEst)}`, L + 465, y, 8.6, '/F4', '0.08 0.10 0.14');
+        if (idx < 2) line(L, y - 4.5, R, y - 4.5, 0.25, '0.85');
       });
-
-      y -= 20;
+      y -= 6;
+      line(L, y, R, y, 1.0, '0.10');
 
       // =========================================================================
-      // 5. SECTION 4: DESIGN CONTRACT & AIS-156 COMPLIANCE AUDIT (WRAPPED)
+      // SECTION IV. DESIGN CONTRACT & AIS-156 COMPLIANCE VERIFICATION
       // =========================================================================
       const rules = contracts?.rules || [];
       const violations = contracts?.violations || [];
       const passCount = rules.length - violations.length;
-      drawText(`4. DESIGN CONTRACT & AIS-156 COMPLIANCE AUDIT (${passCount}/${rules.length} PASSED)`, 36, y, 10.5, true, '0.04 0.45 0.58');
-      lineStroke(36, y - 4, 559, y - 4, '0.82 0.86 0.90', 0.7);
-      y -= 10;
+      y -= 22;
+      text(`IV. DESIGN CONTRACT & AIS-156 COMPLIANCE VERIFICATION (${passCount}/${rules.length} SATISFIED)`, L, y, 9.5, '/F2', '0.06 0.08 0.12');
+      y -= 5;
+      line(L, y, R, y, 1.0, '0.10');
 
       rules.forEach((r, idx) => {
-        if (y < 60) return;
-        const detailText = `${r.title}: ${r.measured} (Limit: ${r.limit})`;
-        const wrapped = wrapText(detailText, 84);
-        const rowH = wrapped.length > 1 ? 26 : 18;
-        y -= rowH;
-
-        if (idx % 2 === 0) rectFill(36, y, 523, rowH, '0.97 0.98 0.99');
-        rectStroke(36, y, 523, rowH, '0.86 0.89 0.92', 0.4);
-
-        // Status badge pill
+        if (y < 68) return;
         const isPass = !!r.passed;
         const isCrit = !isPass && String(r.severity).toUpperCase() === 'CRITICAL';
-        const badgeBg = isPass ? '0.86 0.97 0.91' : isCrit ? '0.99 0.89 0.89' : '0.99 0.95 0.82';
-        const badgeFg = isPass ? '0.04 0.47 0.26' : isCrit ? '0.72 0.11 0.11' : '0.68 0.35 0.04';
-        const badgeTxt = isPass ? 'PASS' : String(r.severity || 'WARN').toUpperCase();
+        const statusCode = isPass ? '[PASS]' : isCrit ? '[CRIT]' : '[WARN]';
+        const statusRgb = isPass ? '0.06 0.42 0.22' : isCrit ? '0.68 0.10 0.10' : '0.65 0.34 0.04';
 
-        rectFill(41, y + rowH - 14, 48, 11, badgeBg);
-        drawText(badgeTxt, 46, y + rowH - 11, 7.2, true, badgeFg);
+        const detailText = `${r.title}: ${r.measured}  |  Spec: ${r.limit}`;
+        const wrapped = wrapText(detailText, 88);
 
         wrapped.forEach((lineStr, lIdx) => {
-          drawText(lineStr, 96, y + rowH - 11 - lIdx * 10, 8.2, !isPass && lIdx === 0, '0.12 0.16 0.22');
+          y -= lIdx === 0 ? 15 : 11;
+          if (lIdx === 0) {
+            text(statusCode, L + 2, y, 8.0, '/F5', statusRgb);
+          }
+          text(lineStr, L + 44, y, 8.4, lIdx === 0 && !isPass ? '/F4' : '/F3', '0.10 0.12 0.16');
         });
+        if (idx < rules.length - 1) line(L, y - 4, R, y - 4, 0.25, '0.86');
       });
+      y -= 5;
+      line(L, y, R, y, 1.0, '0.10');
 
       // =========================================================================
-      // 6. FOOTER
+      // DOCUMENT FOOTER
       // =========================================================================
-      lineStroke(36, 36, 559, 36, '0.80 0.85 0.90', 0.6);
-      drawText('Generated by AlchoCells Battery Pack Engineering Workbench  |  aryadityasaha2007-dot.github.io/alchocells', 36, 24, 7.8, false, '0.45 0.52 0.60');
-      drawText('Page 1 of 1', 515, 24, 7.8, true, '0.35 0.42 0.50');
+      line(L, 42, R, 42, 0.5, '0.45');
+      text('AlchoCells Engineering Workbench  -  Automated Physics & Compliance Verification Sheet', L, 30, 7.8, '/F3', '0.35 0.38 0.42');
+      text('Sheet 1 of 1', R - 42, 30, 7.8, '/F4', '0.25 0.28 0.32');
 
       const stream = ops.join('\n');
       const objects = [
         '1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj',
         '2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj',
-        '3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R /Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> >> endobj',
+        '3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R /Resources << /Font << /F1 5 0 R /F2 6 0 R /F3 7 0 R /F4 8 0 R /F5 9 0 R >> >> >> endobj',
         `4 0 obj << /Length ${stream.length} >> stream\n${stream}\nendstream endobj`,
-        '5 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> endobj',
-        '6 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >> endobj'
+        '5 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >> endobj',
+        '6 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >> endobj',
+        '7 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Times-Roman /Encoding /WinAnsiEncoding >> endobj',
+        '8 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Times-Bold /Encoding /WinAnsiEncoding >> endobj',
+        '9 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Courier-Bold /Encoding /WinAnsiEncoding >> endobj'
       ];
 
       let pdf = '%PDF-1.4\n';
@@ -1561,7 +1552,7 @@ const exportSummary = () => {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `AlchoCells_${seriesCount}S${parallelCount}P_${config.cellChemistry.replace(/\s+/g, '_')}_Report.pdf`;
+      a.download = `AlchoCells_${seriesCount}S${parallelCount}P_${config.cellChemistry.replace(/\s+/g, '_')}_SpecSheet.pdf`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
