@@ -1452,26 +1452,7 @@ const exportSummary = () => {
     setTimeout(() => setCopySuccess(''), 3000);
   };
 
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(summary).then(finishCopy).catch(() => {
-        const ta = document.createElement('textarea');
-        ta.value = summary;
-        document.body.appendChild(ta);
-        ta.select();
-        try { document.execCommand('copy'); } catch (err) {}
-        document.body.removeChild(ta);
-        finishCopy();
-      });
-    } else {
-      const ta = document.createElement('textarea');
-      ta.value = summary;
-      document.body.appendChild(ta);
-      ta.select();
-      try { document.execCommand('copy'); } catch (err) {}
-      document.body.removeChild(ta);
-      finishCopy();
-    }
-  };
+   
 
   // ============================================================================
   // 9. TRANSIENT SIMULATION ENGINE (Fixes D3, D4, D10 + Concept C WMTC & Charge)
