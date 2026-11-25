@@ -559,7 +559,8 @@ function evaluatePack(design, conditions, options = {}) {
   const voltageDropAtLoad = I_load * (totalResistance / 1000);
   const dischargeEff = Math.max(0.72, Math.min(0.99, (packVoltage - voltageDropAtLoad) / packVoltage));
   const peukertFactor = Math.max(0.74, Math.min(1.0, 1.0 - Math.max(0, conditions.cRate - 0.5) * (cell.family === 'LFP' ? 0.035 : 0.055)));
-  const cutoffPenalty = Math.max(0.65, Math.min(1.0, 1.0 - Math.max(0, conditions.bmsVoltCutoff - cell.vMin) * 0.32));
+  const effectiveVMin = cell.family === 'LFP' ? Math.max(cell.vMin, 2.65) : cell.vMin;
+const cutoffPenalty = Math.max(0.65, Math.min(1.0, 1.0 - Math.max(0, conditions.bmsVoltCutoff - effectiveVMin) * 0.32));
 
   const usableEnergyWh = modelMode === 'legacy'
     ? packEnergyWh
