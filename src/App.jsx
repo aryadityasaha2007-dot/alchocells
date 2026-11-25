@@ -1369,13 +1369,14 @@ const exportSummary = () => {
       20
     );
 
-    // Section 2: Subsystem Architecture
-    addLine('2. SUBSYSTEM BILL OF MATERIALS', 11, true, 15);
-    addLine(`Cell Chemistry: ${cell.fullName} (${cell.nominalVoltage}V, ${cell.capacity}Ah, ${cell.internalResMOhm} mOhm)`, 10, false, 14);
-    addLine(`Interconnect Busbars: ${config.busbars} (Limit: ${busbar.ampLimitPerBranch} A/branch)`, 10, false, 14);
-    addLine(`Thermal Management: ${config.cooling} (R_th = ${rTh.toFixed(2)} K/W, tau = ${Math.round(tauSec)} s)`, 10, false, 14);
-    addLine(`Cell Spacing & Enclosure: ${config.spacing} (${spacing.gapMm} mm air gap)`, 10, false, 14);
-    addLine(`BMS Architecture: ${config.bmsTier} (${bms.ntcCount} NTC sensors, CAN: ${bms.hasCanTelemetry ? 'Yes' : 'No'})`, 10, false, 20);
+// Section 2: Subsystem Architecture
+      const ev = currentEval || {};
+      addLine('2. SUBSYSTEM BILL OF MATERIALS', 11, true, 15);
+      addLine(`Cell Chemistry: ${cell?.fullName || config.cellChemistry} (${cell?.voltage ?? ''}V, ${cell?.capacity ?? ''}Ah, ${cell?.internalRes ?? ''} mOhm)`, 10, false, 14);
+      addLine(`Interconnect Busbars: ${config.busbars}`, 10, false, 14);
+      addLine(`Thermal Management: ${config.cooling}${ev.rTh ? ` (R_th = ${Number(ev.rTh).toFixed(2)} K/W)` : ''}`, 10, false, 14);
+      addLine(`Cell Spacing & Enclosure: ${config.spacing}`, 10, false, 14);
+      addLine(`BMS Architecture: ${config.bmsTier}`, 10, false, 20);
 
     // Section 3: Trade-off Comparison
     addLine('3. MULTI-OPTION TRADE-OFF COMPARISON', 11, true, 15);
