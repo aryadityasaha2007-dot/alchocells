@@ -1299,14 +1299,158 @@ const applyRuleFix = (rule) => {
    Stated Limitations: Lumped-capacitance thermal model (Bi < 0.1 assumption); convection coefficients h are textbook engineering estimates; does not replace physical AIS-156 thermal propagation nail-penetration testing.
    Recommended Next Step: Construct a safe 4S2P (<16.8V) low-voltage bench sub-module with a 15A blade fuse, 4x NTC thermistors, and fireproof containment to empirically calibrate R_th and tau.`;
   };
+const exportSummary = () => {
+    const sanitize = (str) =>
+      String(str ?? '')
+        .replace(/₹/g, 'INR ')
+        .replace(/≤/g, '<=')
+        .replace(/≥/g, '>=')
+        .replace(/°/g, ' deg ')
+        .replace(/×/g, 'x')
+        .replace(/—|–/g, '-')
+        .replace(/•/g, '|')
+        .replace(/[^\x20-\x7E]/g, '')
+        .replace(/\\/g, '\\\\')
+        .replace(/\(/g, '\\(')
+        .replace(/\)/g, '\\)');
 
-  const exportSummary = () => {
-    const summary = buildStructuredReportText();
-    const finishCopy = () => {
-      setCopySuccess('Copied to clipboard!');
-      setShowReportModal(true);
-      setTimeout(() => setCopySuccess(''), 3000);
+    const lines = [];
+    const addLine = (text, size = 10, bold = false, gapAfter = 14) => {
+      lines.push({ text: sanitize(text), size, bold, gapAfter });
     };
+
+    // Header
+    addLine('ALCHOCELLS - BATTERY PACK ENGINEERING DOSSIER', 14, true, 18);
+    addLine(
+      `Configuration: ${seriesCount}S${parallelCount}P ${cell.fullName} | Application: ${config.application}`,
+      10,
+      true,
+      14
+    );
+    addLine(
+      `Generated: ${new Date().toLocaleDateString('en-IN', { dateStyle: 'medium' })} | Solver: ${
+        modelMode === 'physics' ? 'Physics-Corrected' : 'Legacy'
+      } | Pricing: ${costBasis.toUpperCase()} (${currency})`,
+      9,
+      false,
+      20
+    );
+
+    // Section 1: Executive KPI Summary
+    addLine('1. EXECUTIVE PERFORMANCE & PACK SUMMARY', 11, true, 15);
+    addLine(
+      `Nominal Bus: ${packVoltage.toFixed(1)} V (${packCapacity.toFixed(1)} Ah)   |   Total Cells: ${totalCells} (${seriesCount}S x ${parallelCount}P)`,
+      10,
+      false,
+      14
+    );
+    addLine(
+      `Usable Energy (@ 1C): ${Math.round(usableEnergyAt1CWh).toLocaleString()} Wh   |   Peak Temp (@ 1C): ${tempAtStated1C.toFixed(1)} deg C`,
+      10,
+      false,
+      14
+    );
+    addLine(
+      `Total Mass: ${totalMassEst.toFixed(2)} kg   |   Envelope: ${lengthMm} x ${widthMm} x ${heightMm} mm (${packVolumeLiters.toFixed(1)} L)`,
+      10,
+      false,
+      14
+    );
+    addLine(
+      `CC-CV Charge (10-90%): ${chargeTimeMinutes} min   |   Cycle Life (80% SOH): ${effectiveCycles.toLocaleString()} cycles`,
+      10,
+      false,
+      14
+    );
+    addLine(
+      `Total BOM Cost: ${money(totalCostEst)} (${money(packCostPerKWh)}/kWh)   |   Full LCOS: ${money(fullLcosPerKWh, 2)}/kWh`,
+      10,
+      false,
+      20
+    );
+
+    // Section 2: Subsystem Architecture
+    addLine('2. SUBSYSTEM BILL OF MATERIALS', 11, true, 15);
+    addLine(`Cell Chemistry: ${cell.fullName} (${cell.nominalVoltage}V, ${cell.capacity}Ah, ${cell.internalResMOhm} mOhm)`, 10, false, 14);
+    addLine(`Interconnect Busbars: ${config.busbars} (Limit: ${busbar.ampLimitPerBranch} A/branch)`, 10, false, 14);
+    addLine(`Thermal Management: ${config.cooling} (R_th = ${rTh.toFixed(2)} K/W, tau = ${Math.round(tauSec)} s)`, 10, false, 14);
+    addLine(`Cell Spacing & Enclosure: ${config.spacing} (${spacing.gapMm} mm air gap)`, 10, false, 14);
+    addLine(`BMS Architecture: ${config.bmsTier} (${bms.ntcCount} NTC sensors, CAN: ${bms.hasCanTelemetry ? 'Yes' : 'No'})`, 10, false, 20);
+
+    // Section 3: Trade-off Comparison
+    addLine('3. MULTI-OPTION TRADE-OFF COMPARISON', 11, true, 15);
+    [
+      { tag: 'Baseline', ev: evalBaseline },
+      { tag: 'Option A', ev: evalOptionA },
+      { tag: 'Option B', ev: evalOptionB }
+    ].forEach(({ tag, ev }) => {
+      addLine(
+        `${tag} (${ev.seriesCount}S${ev.parallelCount}P ${ev.design.cellChemistry}): ${Math.round(
+          ev.usableEnergyAt1CWh
+        )} Wh | ${ev.tempAtStated1C.toFixed(1)} deg C | ${ev.totalMassEst.toFixed(2)} kg | ${
+          ev.chargeTimeMinutes
+        } min | ${ev.effectiveCycles} cyc | ${money(ev.totalCostEst)}`,
+        9.5,
+        false,
+        14
+      );
+    });
+    addLine('', 10, false, 8);
+
+    // Section 4: Design Contract Audit
+    const passCount = contracts.rules.length - contracts.violations.length;
+    addLine(`4. DESIGN CONTRACT & AIS-156 COMPLIANCE AUDIT (${passCount}/${contracts.rules.length} PASS)`, 11, true, 15);
+    contracts.rules.forEach((r) => {
+      const status = r.passed ? '[PASS]' : `[${r.severity}]`;
+      addLine(`${status} ${r.title}: ${r.measured} (Limit: ${r.limit})`, 9.5, !r.passed, 14);
+    });
+
+    // Build single-page A4 PDF stream
+    let y = 800;
+    const ops = ['0.08 0.12 0.18 rg', '45 788 505 2 re f', '0 0 0 rg'];
+    lines.forEach((item) => {
+      if (y < 55) return;
+      const fontKey = item.bold ? '/F2' : '/F1';
+      ops.push(`BT ${fontKey} ${item.size} Tf 45 ${y} Td (${item.text}) Tj ET`);
+      y -= item.gapAfter;
+    });
+
+    const stream = ops.join('\n');
+    const objects = [
+      '1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj',
+      '2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj',
+      '3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R /Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> >> endobj',
+      `4 0 obj << /Length ${stream.length} >> stream\n${stream}\nendstream endobj`,
+      '5 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> endobj',
+      '6 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >> endobj'
+    ];
+
+    let pdf = '%PDF-1.4\n';
+    const offsets = [0];
+    objects.forEach((obj) => {
+      offsets.push(pdf.length);
+      pdf += obj + '\n';
+    });
+    const xrefStart = pdf.length;
+    pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
+    offsets.slice(1).forEach((off) => {
+      pdf += `${String(off).padStart(10, '0')} 00000 n \n`;
+    });
+    pdf += `trailer << /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefStart}\n%%EOF`;
+
+    const blob = new Blob([pdf], { type: 'application/pdf' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `AlchoCells_${seriesCount}S${parallelCount}P_${config.cellChemistry.replace(/\s+/g, '_')}_Report.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    setCopySuccess('PDF downloaded!');
+    setTimeout(() => setCopySuccess(''), 3000);
+  };
 
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(summary).then(finishCopy).catch(() => {
