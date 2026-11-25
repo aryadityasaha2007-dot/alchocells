@@ -1064,6 +1064,29 @@ const applyRuleFix = (rule) => {
       cost: costChart(evalOptionB.totalCostEst)
     }
   ], [evalBaseline, evalOptionA, evalOptionB]);
+  const liveCostBreakdown = useMemo(() => {
+    const buildRow = (label, ev) => {
+      const busbarUsd = ev.totalCells * ev.busbar.costPerCell;
+      const holderUsd = ev.totalCells * ev.spacing.costPerCell;
+      const coolingUsd = ev.cooling.costUsd;
+      const bmsUsd = ev.bms.costUsd;
+      const overheadUsd = Math.max(0, ev.totalCostEst - (ev.cellsCostUsd + busbarUsd + holderUsd + coolingUsd + bmsUsd));
+      const scale = (usd) => (currency === 'INR' ? Math.round(usd * USD_TO_INR) : Math.round(usd));
+      return {
+        name: label,
+        Cells: scale(ev.cellsCostUsd),
+        BusbarsHolders: scale(busbarUsd + holderUsd),
+        Cooling: scale(coolingUsd),
+        BMS: scale(bmsUsd),
+        Enclosure: scale(overheadUsd)
+      };
+    };
+    return [
+      buildRow('Baseline', evalBaseline),
+      buildRow('Option A', evalOptionA),
+      buildRow('Option B (LFP)', evalOptionB)
+    ];
+  }, [evalBaseline, evalOptionA, evalOptionB, currency]);
 
   // Concept B (H2): Pareto Frontier & Monte Carlo Risk Sweeper
   const paretoAnalysis = useMemo(() => {
