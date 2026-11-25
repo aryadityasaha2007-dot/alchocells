@@ -2077,6 +2077,32 @@ const applyRuleFix = (rule) => {
                   </div>
                 </div>
               </div>
+              {/* Stacked Subsystem BOM Cost Breakdown */}
+              <div className="bg-slate-900 rounded-md border border-slate-800 shadow-sm p-6">
+                <div className="mb-3">
+                  <h2 className="text-base font-semibold text-slate-100">Subsystem BOM Cost Architecture ({currencySymbol})</h2>
+                  <p className="text-xs text-slate-400">Component-level cost split across cells, interconnects, thermal hardware, and BMS ({costBasis} basis)</p>
+                </div>
+                <div className="h-64 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={liveCostBreakdown} layout="vertical" margin={{ top: 10, right: 30, left: 20, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#334155" />
+                      <XAxis type="number" tick={{ fill: '#94a3b8', fontSize: 11 }} />
+                      <YAxis type="category" dataKey="name" width={110} tick={{ fill: '#cbd5e1', fontSize: 12 }} />
+                      <Tooltip
+                        contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #334155', color: '#f8fafc', fontSize: '12px' }}
+                        formatter={(val, name) => [`${currencySymbol}${Number(val).toLocaleString()}`, name]}
+                      />
+                      <Legend wrapperStyle={{ fontSize: '12px', color: '#cbd5e1' }} />
+                      <Bar dataKey="Cells" stackId="a" name="Cells" fill="#0ea5e9" />
+                      <Bar dataKey="BusbarsHolders" stackId="a" name="Busbars & Holders" fill="#6366f1" />
+                      <Bar dataKey="Cooling" stackId="a" name="Thermal / Cooling" fill="#f59e0b" />
+                      <Bar dataKey="BMS" stackId="a" name="BMS Electronics" fill="#10b981" />
+                      <Bar dataKey="Enclosure" stackId="a" name="Enclosure & Assembly" fill="#64748b" radius={[0, 4, 4, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
             </div>
           )}
 
