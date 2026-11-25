@@ -706,6 +706,11 @@ function evaluateDesignContracts(ctx) {
     steadyPeakTemp, tempAtStated1C, packCostPerKWh, chargeTimeMinutes, totalMassEst, currency
   } = ctx;
 
+  const minReqParallel = Math.max(
+    Number(design.parallel) + 1,
+    Math.ceil((conditions.cRate * Number(design.parallel) * cell.capacity) / cell.maxContDischargeA)
+  );
+
   const rules = [
     {
       id: 'CON-CELL-01',
@@ -715,7 +720,8 @@ function evaluateDesignContracts(ctx) {
       measured: `${cellCurrentA.toFixed(1)} A/cell`,
       limit: `≤ ${cell.maxContDischargeA.toFixed(1)} A/cell`,
       source: cell.provenance,
-      fixHint: `Increase Parallel count (P) from ${design.parallel}P to ≥${Math.ceil((conditions.cRate * design.parallel * cell.capacity) / cell.maxContDischargeA)}P or switch to Molicel P42A / A123 LFP.`
+      fixHint: `Increase Parallel count (P) from ${design.parallel}P to ≥${minReqParallel}P or switch to Molicel P42A / A123 LFP.`,
+      fixPatch: { design: { parallel: minReqParallel } }
     },
     {
       id: 'CON-BUS-02',
@@ -725,7 +731,12 @@ function evaluateDesignContracts(ctx) {
       measured: `${cellCurrentA.toFixed(1)} A/branch`,
       limit: `≤ ${busbar.ampLimitPerBranch.toFixed(1)} A (${design.busbars})`,
       source: 'IPC-2152 / Spot-Welded Strip Ampacity Standard',
-      fixHint: 'Upgrade Interconnect Busbars from Nickel Strips (0.15mm) to Copper-Nickel Sandwich (0.2mm) or Laser-welded Aluminum.'
+      fixHint: 'Upgrade Interconnect Busbars from Nickel Strips (0.15mm) to Copper-Nickel Sandwich (0.2mm) or Laser-welded Aluminum.',
+      fixPatch: {
+        design: {
+          busbars: cellCurrentA > 24.0 ? 'Laser-welded Aluminum' : 'Copper-Nickel Sandwich (0.2mm)'
+        }
+      }
     },
     {
       id: 'CON-AIS-03',
@@ -735,7 +746,13 @@ function evaluateDesignContracts(ctx) {
       measured: `${spacing.gapMm}mm gap • ${bms.ntcCount} NTC • CAN=${bms.hasCanTelemetry ? 'Yes' : 'No'}`,
       limit: '≥ 2.0mm cell gap + ≥ 4 NTC sensors + CAN BMS',
       source: 'MoRTH / ARAI AIS-156 Amendment 3 (L-Category EV Traction Packs)',
-      fixHint: 'Select ≥2mm Cylindrical Holders and Advanced (Active Balancing, CAN bus) BMS tier.'
+      fixHint: 'Select ≥2mm Cylindrical Holders and Advanced (Active Balancing, CAN bus) BMS tier.',
+      fixPatch: {
+        design: {
+          ...(spacing.ais156Pass ? {} : { spacing: '2mm Cylindrical Holders' }),
+          ...(bms.ais156Compliant ? {} : { bmsTier: 'Advanced (Active Balancing, CAN bus)' })
+        }
+      }
     },
     {
       id: 'CON-THM-04',
@@ -745,7 +762,12 @@ function evaluateDesignContracts(ctx) {
       measured: `${steadyPeakTemp.toFixed(1)} °C (@ ${conditions.cRate}C, ${conditions.ambientTemp}°C amb)`,
       limit: `≤ ${Math.min(conditions.bmsTempTrip, appProfile.maxTemp1CCelsius + 3).toFixed(1)} °C`,
       source: `${cell.fullName} SOA & Application Thermal Spec`,
-      fixHint: 'Switch Cooling Arrangement to Active Air, PCM, or Liquid Cooling Plate, or lower discharge C-rate.'
+      fixHint: 'Switch Cooling Arrangement to Active Air, PCM, or Liquid Cooling Plate, or lower discharge C-rate.',
+      fixPatch: {
+        design: {
+          cooling: design.cooling === 'Passive (Natural Convection)' ? 'Active Air (Forced Fans)' : 'Liquid Cooling Plate (Bottom)'
+        }
+      }
     },
     {
       id: 'CON-CHG-05',
@@ -757,7 +779,10 @@ function evaluateDesignContracts(ctx) {
       source: `${cell.fullName} Charge Specification`,
       fixHint: conditions.ambientTemp < 0
         ? 'Sub-zero charging causes metallic lithium plating; enable BMS pre-heater or raise ambient ≥ 5°C.'
-        : 'Samsung 35E is limited to 0.57C (2A) charge (~100 min); switch to Molicel P42A (2C) or A123 LFP (4C) for fast charging.'
+        : 'Samsung 35E is limited to 0.57C (2A) charge (~100 min); switch to Molicel P42A (2C) or A123 LFP (4C) for fast charging.',
+      fixPatch: conditions.ambientTemp < 0
+        ? { params: { ambientTemp: 15 } }
+        : { design: { cellChemistry: 'Molicel P42A' } }
     },
     {
       id: 'CON-BMS-06',
@@ -767,7 +792,8 @@ function evaluateDesignContracts(ctx) {
       measured: `${conditions.bmsVoltCutoff.toFixed(2)} V/cell`,
       limit: `≥ ${cell.vMin.toFixed(2)} V/cell (${cell.fullName})`,
       source: cell.provenance,
-      fixHint: `Raise BMS Under-Volt slider to at least ${cell.vMin.toFixed(2)}V to prevent copper current-collector dissolution.`
+      fixHint: `Raise BMS Under-Volt slider to at least ${cell.vMin.toFixed(2)}V to prevent copper current-collector dissolution.`,
+      fixPatch: { params: { bmsVoltCutoff: cell.vMin } }
     },
     {
       id: 'CON-ECN-07',
@@ -777,7 +803,8 @@ function evaluateDesignContracts(ctx) {
       measured: `${fmtMoney(packCostPerKWh, currency)} / kWh`,
       limit: `${fmtMoney(appProfile.bnefPackCostBandMin, currency)}–${fmtMoney(appProfile.bnefPackCostBandMax, currency)}/kWh (BNEF 2W/3W ${fmtMoney(133, currency)}/kWh ref)`,
       source: 'BloombergNEF 2025 Li-Ion Battery Price Survey',
-      fixHint: 'Toggle Cost Basis to "Volume OEM" in the top bar to evaluate mass-production pack economics vs single-unit retail.'
+      fixHint: 'Toggle Cost Basis to "Volume OEM" in the top bar to evaluate mass-production pack economics vs single-unit retail.',
+      fixPatch: { costBasis: 'volume' }
     }
   ];
 
@@ -787,7 +814,6 @@ function evaluateDesignContracts(ctx) {
 
   return { rules, violations, criticalCount, warningCount, totalCells, packVoltage, usableEnergyAt1CWh, totalMassEst };
 }
-
 // ============================================================================
 // 8.WMTC MISSION PROFILE DUTY CYCLE GENERATOR (Concept C / I2)
 // ============================================================================
