@@ -846,6 +846,7 @@ React.useEffect(() => {
   const [currency, setCurrency] = useState('INR');        // 'INR' | 'USD' (display only)
   const [showLegacyInfo, setShowLegacyInfo] = useState(false);
   const [showPassing, setShowPassing] = useState(false);
+  const [swapsPerDay, setSwapsPerDay] = useState(2.5);
 
   // Active Application & Active Slot ('Baseline Starting Design' | 'Option A...' | 'Option B...')
   const [application, setApplication] = useState('Swappable 48V E-Scooter Module');
@@ -1513,6 +1514,7 @@ const applyRuleFix = (rule) => {
           { id: 'tradeoff', icon: BarChart2, label: 'Design Trade-Off Comparison' },
           { id: 'bms', icon: Cpu, label: 'Subsystem Parameter Exchange' },
           { id: 'traceability', icon: FileText, label: 'Traceability & Datasheets' },
+      { id: 'lifecycle', icon: Battery, label: 'Cycle Life & Fleet Economics' },
         ].map((tab) => (
           <button
             key={tab.id}
@@ -2465,6 +2467,214 @@ const applyRuleFix = (rule) => {
               </div>
             </div>
           )}
+
+          {/* =====================================================================
+              TAB 5: BATTERY CYCLE LIFE & SWAPPING FLEET ECONOMICS
+             ===================================================================== */}
+          {activeTab === 'lifecycle' && (() => {
+            const usableKwh = Math.max(0.1, usableEnergyAt1CWh / 1000);
+            const rangePerSwapKm = usableEnergyAt1CWh / 28; // 28 Wh/km e-scooter consumption
+            const stationOpsMarginUsd = 0.28; // ~₹26/swap station capex & handling margin
+            const costPerSwapUsd = usableKwh * fullLcosPerKWh + stationOpsMarginUsd;
+            const batteryLifeYears = effectiveCycles / (365 * Math.max(0.5, swapsPerDay));
+            const electricCostPerKmUsd = costPerSwapUsd / Math.max(1, rangePerSwapKm);
+            const petrolCostPerKmUsd = 2.40 / USD_TO_INR; // ₹2.40/km petrol scooter benchmark
+            const savingsPerKmUsd = petrolCostPerKmUsd - electricCostPerKmUsd;
+            const annualKm = rangePerSwapKm * swapsPerDay * 365;
+            const annualSavingsUsd = savingsPerKmUsd * annualKm;
+
+            // SOH degradation curve comparing Baseline, Option A, and Option B
+            const maxCycPlot = Math.max(
+              evalBaseline.effectiveCycles,
+              evalOptionA.effectiveCycles,
+              evalOptionB.effectiveCycles,
+              1000
+            );
+            const stepCyc = Math.max(100, Math.round(maxCycPlot / 12 / 50) * 50);
+            const sohCurve = [];
+            for (let c = 0; c <= maxCycPlot + stepCyc; c += stepCyc) {
+              const sohAt = (effCyc) => parseFloat(Math.max(65, 100 - 20 * (c / Math.max(1, effCyc))).toFixed(1));
+              sohCurve.push({
+                cycles: c,
+                Baseline: sohAt(evalBaseline.effectiveCycles),
+                OptionA: sohAt(evalOptionA.effectiveCycles),
+                OptionB: sohAt(evalOptionB.effectiveCycles)
+              });
+            }
+
+            return (
+              <div className="space-y-6">
+                {/* Top KPI Strip */}
+                <div className="bg-slate-900 rounded-xl border border-slate-800 shadow-sm grid grid-cols-2 md:grid-cols-4 divide-x divide-slate-800">
+                  <div className="p-5">
+                    <p className="text-xs text-slate-500">Temp-adjusted cycle life</p>
+                    <p className="text-2xl font-bold text-slate-100 mt-1">{effectiveCycles.toLocaleString()} cycles</p>
+                    <p className="text-xs text-slate-500 mt-1">To 80% SOH @ {steadyPeakTemp.toFixed(1)} °C peak</p>
+                  </div>
+                  <div className="p-5">
+                    <p className="text-xs text-slate-500">Fleet service lifetime</p>
+                    <p className="text-2xl font-bold text-emerald-400 mt-1">{batteryLifeYears.toFixed(1)} years</p>
+                    <p className="text-xs text-slate-500 mt-1">At {swapsPerDay.toFixed(1)} swaps/day ({Math.round(annualKm).toLocaleString()} km/yr)</p>
+                  </div>
+                  <div className="p-5">
+                    <p className="text-xs text-slate-500">Cost per battery swap</p>
+                    <p className="text-2xl font-bold text-cyan-400 mt-1">{money(costPerSwapUsd, 2, 1)}</p>
+                    <p className="text-xs text-slate-500 mt-1">{rangePerSwapKm.toFixed(0)} km range @ 28 Wh/km</p>
+                  </div>
+                  <div className="p-5">
+                    <p className="text-xs text-slate-500">Running cost vs petrol</p>
+                    <p className="text-2xl font-bold text-slate-100 mt-1">{money(electricCostPerKmUsd, 4, 2)} / km</p>
+                    <p className={`text-xs mt-1 ${savingsPerKmUsd >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                      {savingsPerKmUsd >= 0 ? `Saves ${money(annualSavingsUsd, 0, 0)}/yr vs ${money(petrolCostPerKmUsd, 3, 2)}/km ICE` : 'Higher than petrol benchmark'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Duty Intensity Control + SOH Degradation Chart */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                  <div className="lg:col-span-4 bg-slate-900 rounded-md border border-slate-800 shadow-sm p-6 space-y-5">
+                    <h2 className="text-base font-semibold text-slate-100 border-b border-slate-800 pb-2">
+                      Swapping Fleet Duty Parameters
+                    </h2>
+
+                    <div>
+                      <label htmlFor="slider-swapsPerDay" className="block text-sm font-medium text-slate-400 mb-1 flex justify-between">
+                        <span>Daily Swap Frequency</span>
+                        <span className="text-emerald-400 font-mono font-bold">{swapsPerDay.toFixed(1)} swaps/day</span>
+                      </label>
+                      <input
+                        id="slider-swapsPerDay"
+                        type="range"
+                        min="1.0"
+                        max="4.0"
+                        step="0.5"
+                        value={swapsPerDay}
+                        onChange={(e) => setSwapsPerDay(parseFloat(e.target.value))}
+                        className="w-full cursor-pointer accent-emerald-500 h-2 bg-slate-700 rounded-lg appearance-none"
+                      />
+                      <p className="text-xs text-slate-500 mt-1">
+                        1.0/day = personal commuter · 2.5–4.0/day = commercial delivery fleet
+                      </p>
+                    </div>
+
+                    <div className="bg-slate-950 p-4 rounded border border-slate-800 space-y-2 text-xs">
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Active Chemistry:</span>
+                        <span className="font-mono text-slate-200">{cell.fullName}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Datasheet Base Cycles:</span>
+                        <span className="font-mono text-slate-200">{cell.cycles.toLocaleString()} cycles</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Thermal Ageing Derating:</span>
+                        <span className="font-mono text-amber-400">
+                          -{Math.round((1 - effectiveCycles / Math.max(1, cell.cycles)) * 100)}% (@ {steadyPeakTemp.toFixed(1)}°C)
+                        </span>
+                      </div>
+                      <div className="flex justify-between border-t border-slate-800 pt-2">
+                        <span className="text-slate-400">Lifetime Energy Delivered:</span>
+                        <span className="font-mono text-cyan-400 font-bold">
+                          {Math.round(usableKwh * effectiveCycles * 0.95).toLocaleString()} kWh
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="lg:col-span-8 bg-slate-900 rounded-md border border-slate-800 shadow-sm p-6">
+                    <h2 className="text-base font-semibold text-slate-100 mb-1">
+                      State-of-Health (SOH) Cycle Retention Comparison
+                    </h2>
+                    <p className="text-xs text-slate-400 mb-3">
+                      Projected capacity retention down to the 80% end-of-first-life retirement threshold
+                    </p>
+                    <div className="h-72 w-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={sohCurve} margin={{ top: 10, right: 20, left: 0, bottom: 15 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                          <XAxis
+                            dataKey="cycles"
+                            tick={{ fill: '#94a3b8', fontSize: 11 }}
+                            label={{ value: 'Charge / Swap Cycles', position: 'insideBottom', offset: -8, fill: '#64748b', fontSize: 11 }}
+                          />
+                          <YAxis
+                            domain={[70, 100]}
+                            unit="%"
+                            tick={{ fill: '#94a3b8', fontSize: 11 }}
+                          />
+                          <Tooltip
+                            contentStyle={{ backgroundColor: '#020617', border: '1px solid #1e293b', color: '#f8fafc', fontSize: '12px' }}
+                            formatter={(val) => [`${val}% SOH`, '']}
+                            labelFormatter={(c) => `${c} Cycles`}
+                          />
+                          <Legend verticalAlign="top" height={30} wrapperStyle={{ fontSize: '12px' }} />
+                          <ReferenceLine
+                            y={80}
+                            stroke="#f43f5e"
+                            strokeDasharray="5 4"
+                            label={{ value: '80% SOH Retirement Limit', position: 'insideBottomLeft', fill: '#f43f5e', fontSize: 11 }}
+                          />
+                          <Line type="monotone" dataKey="Baseline" name={`Baseline (${evalBaseline.design.cellChemistry})`} stroke="#94a3b8" strokeWidth={2} dot={false} />
+                          <Line type="monotone" dataKey="OptionA" name={`Option A (${evalOptionA.design.cellChemistry})`} stroke="#0ea5e9" strokeWidth={2} dot={false} />
+                          <Line type="monotone" dataKey="OptionB" name={`Option B (${evalOptionB.design.cellChemistry})`} stroke="#10b981" strokeWidth={2.5} dot={false} />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Side-by-Side Fleet Lifecycle Comparison Table */}
+                <div className="bg-slate-900 rounded-md border border-slate-800 shadow-sm overflow-hidden">
+                  <div className="px-6 py-4 border-b border-slate-800 bg-slate-800/50">
+                    <h2 className="text-base font-semibold text-slate-100">
+                      Side-by-Side Swapping Fleet Lifecycle & Economics ({swapsPerDay.toFixed(1)} swaps/day)
+                    </h2>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs text-left">
+                      <thead className="text-slate-400 uppercase bg-slate-950 border-b border-slate-800">
+                        <tr>
+                          <th className="px-4 py-3">Design Option</th>
+                          <th className="px-4 py-3">Effective Cycles</th>
+                          <th className="px-4 py-3">Service Life</th>
+                          <th className="px-4 py-3">Range / Swap</th>
+                          <th className="px-4 py-3">Cost / Swap</th>
+                          <th className="px-4 py-3">Running Cost</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-800 text-slate-300 font-mono">
+                        {[
+                          { label: 'Baseline', ev: evalBaseline },
+                          { label: 'Option A', ev: evalOptionA },
+                          { label: 'Option B (LFP)', ev: evalOptionB }
+                        ].map(({ label, ev }) => {
+                          const kwh = Math.max(0.1, ev.usableEnergyAt1CWh / 1000);
+                          const km = ev.usableEnergyAt1CWh / 28;
+                          const swapCost = kwh * ev.fullLcosPerKWh + stationOpsMarginUsd;
+                          const yrs = ev.effectiveCycles / (365 * Math.max(0.5, swapsPerDay));
+                          return (
+                            <tr key={label} className="hover:bg-slate-800/40">
+                              <td className="px-4 py-3 font-sans font-bold text-slate-100">
+                                {label} ({ev.seriesCount}S{ev.parallelCount}P {ev.design.cellChemistry})
+                              </td>
+                              <td className="px-4 py-3">{ev.effectiveCycles.toLocaleString()} cyc</td>
+                              <td className="px-4 py-3 text-emerald-400 font-bold">{yrs.toFixed(1)} yrs</td>
+                              <td className="px-4 py-3">{km.toFixed(0)} km</td>
+                              <td className="px-4 py-3 text-cyan-400">{money(swapCost, 2, 1)}</td>
+                              <td className="px-4 py-3">{money(swapCost / Math.max(1, km), 4, 2)} / km</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
+
+          
         </div>
       </main>
 
