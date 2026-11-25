@@ -832,6 +832,45 @@ function generateWmtcDutyFactor(stepIdx, totalSteps) {
 export default function App() {
   const [activeTab, setActiveTab] = useState('workbench');
   const [copySuccess, setCopySuccess] = useState('');
+  // Load shared configuration from URL hash if present (#cfg=...)
+  React.useEffect(() => {
+    try {
+      const hash = window.location.hash;
+      if (hash.startsWith('#cfg=')) {
+        const decoded = JSON.parse(decodeURIComponent(atob(hash.slice(5))));
+        if (decoded.application && APPLICATION_PROFILES[decoded.application]) {
+          setApplication(decoded.application);
+          if (decoded.designSelection) setDesignSelection(decoded.designSelection);
+          if (decoded.slotConfig) {
+            setAllAppDesigns(prev => ({
+              ...prev,
+              [decoded.application]: {
+                ...prev[decoded.application],
+                [decoded.designSelection || 'Baseline Starting Design']: decoded.slotConfig
+              }
+            }));
+          }
+          if (decoded.params) setParams(prev => ({ ...prev, ...decoded.params }));
+        }
+      }
+    } catch (e) {}
+  }, []);
+
+  const copyShareLink = () => {
+    try {
+      const payload = btoa(encodeURIComponent(JSON.stringify({
+        application,
+        designSelection,
+        slotConfig: allAppDesigns[application][designSelection],
+        params
+      })));
+      const shareUrl = `${window.location.origin}${window.location.pathname}#cfg=${payload}`;
+      window.history.replaceState(null, '', `#cfg=${payload}`);
+      navigator.clipboard?.writeText(shareUrl);
+      setCopySuccess('Share link copied!');
+      setTimeout(() => setCopySuccess(''), 3000);
+    } catch (e) {}
+  };
   const [showReportModal, setShowReportModal] = useState(false);
 const [lightMode, setLightMode] = useState(() => {
   try { return localStorage.getItem('theme') === 'light'; } catch (e) { return false; }
