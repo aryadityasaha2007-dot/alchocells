@@ -1537,6 +1537,13 @@ const applyRuleFix = (rule) => {
 </button>
           {copySuccess && <span className="text-emerald-400 text-sm flex items-center"><CheckCircle2 className="w-4 h-4 mr-1"/> {copySuccess}</span>}
           <button
+            type="button"
+            onClick={copyShareLink}
+            className="px-3 py-2 rounded text-xs font-bold border border-slate-700 bg-slate-800 hover:bg-slate-700 text-cyan-300 transition"
+          >
+            Share Link
+          </button>
+          <button
             onClick={exportSummary}
             className="bg-cyan-600 hover:bg-cyan-500 text-slate-950 px-4 py-2 rounded flex items-center transition-colors text-sm font-bold shadow-sm"
           >
