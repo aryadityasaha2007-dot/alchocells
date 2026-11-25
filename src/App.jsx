@@ -928,6 +928,28 @@ React.useEffect(() => {
   const rankRule = (r) => (r.passed ? 3 : r.severity === 'CRITICAL' ? 0 : r.severity === 'WARNING' ? 1 : 2);
   const failingRules = contracts.rules.filter(r => !r.passed).sort((a, b) => rankRule(a) - rankRule(b));
   const passingRules = contracts.rules.filter(r => r.passed);
+const applyRuleFix = (rule) => {
+    if (!rule.fixPatch) return;
+    if (rule.fixPatch.design) {
+      setAllAppDesigns(prev => ({
+        ...prev,
+        [application]: {
+          ...prev[application],
+          [designSelection]: {
+            ...prev[application][designSelection],
+            ...rule.fixPatch.design
+          }
+        }
+      }));
+    }
+    if (rule.fixPatch.params) {
+      setParams(prev => ({ ...prev, ...rule.fixPatch.params }));
+    }
+    if (rule.fixPatch.costBasis) {
+      setCostBasis(rule.fixPatch.costBasis);
+    }
+  };
+
   const renderRuleRow = (rule) => (
     <div
       key={rule.id}
@@ -953,11 +975,19 @@ React.useEffect(() => {
         <p className="text-sm font-semibold text-slate-100">{rule.title}</p>
         {!rule.passed && <p className="text-slate-400 mt-0.5">Fix: {rule.fixHint}</p>}
       </div>
-      <div className="font-mono text-slate-300 lg:w-72 shrink-0">{rule.measured}</div>
-      <div className="font-mono text-slate-500 lg:w-[26rem] shrink-0 lg:text-right">{rule.limit}</div>
+      <div className="font-mono text-slate-300 lg:w-56 shrink-0">{rule.measured}</div>
+      <div className="font-mono text-slate-500 lg:w-64 shrink-0 lg:text-right">{rule.limit}</div>
+      {!rule.passed && rule.fixPatch && (
+        <button
+          type="button"
+          onClick={() => applyRuleFix(rule)}
+          className="inline-flex items-center gap-1 px-3 py-1.5 rounded bg-cyan-600 hover:bg-cyan-500 text-slate-950 font-bold text-xs shrink-0 transition"
+        >
+          <Check className="w-3.5 h-3.5" /> Apply fix
+        </button>
+      )}
     </div>
   );
-
   // Dynamic Radar & Bar data driven live by the 3 configurations (Fixes D1)
   const liveRadarData = useMemo(() => [
     { subject: 'Specific Energy', Baseline: evalBaseline.scores.specificEnergy, OptionA: evalOptionA.scores.specificEnergy, OptionB: evalOptionB.scores.specificEnergy, fullMark: 100 },
