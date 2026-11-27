@@ -2082,6 +2082,75 @@ const exportSummary = () => {
                       <p className="text-lg font-semibold text-slate-100">{currentEval.cellMassTotal.toFixed(2)} kg</p>
                     </div>
                   </div>
+                  <div>
+                      <p className="text-[11px] text-slate-500">Cell mass</p>
+                      <p className="text-lg font-semibold text-slate-100">{currentEval.cellMassTotal.toFixed(2)} kg</p>
+                    </div>
+                  </div>
+
+                  {/* Thermal Stability, Expansion & Thermal Safeguard */}
+                  {(() => {
+                    const tempMargin = simTempLimit - cellVariationStats.hottestCellTempC;
+                    const stabilityLabel = tempMargin >= 10 ? 'Stable' : tempMargin >= 3 ? 'Marginal' : 'Critical';
+                    const stabilityColor = tempMargin >= 10 ? 'text-emerald-400' : tempMargin >= 3 ? 'text-amber-400' : 'text-rose-400';
+
+                    const swellPct = config.cellChemistry === 'EVE LF50K' ? 3.5 : cell.family === 'LFP' ? 1.2 : 0.8;
+                    const deltaT = Math.max(0, steadyPeakTemp - params.ambientTemp);
+                    const thermalExpMm = (lengthMm * 23e-6 * deltaT) + (config.cellChemistry === 'EVE LF50K' ? seriesCount * cell.diameterMm * 0.015 : 0);
+                    const totalGapBudgetMm = (seriesCount - 1) * currentEval.spacing.gapMm;
+                    const expansionOk = thermalExpMm <= totalGapBudgetMm * 0.65;
+
+                    const safeguardActive = currentEval.spacing.ais156Pass && currentEval.bms.ais156Compliant && cellVariationStats.hottestCellTempC < params.bmsTempTrip;
+
+                    return (
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 border-t border-slate-800 mt-4 pt-4">
+                        <div className="p-3 bg-slate-950 border border-slate-800 rounded-lg">
+                          <div className="flex items-center justify-between">
+                            <p className="text-[11px] text-slate-500">Thermal stability</p>
+                            <span className={`text-[11px] font-semibold ${stabilityColor}`}>{stabilityLabel}</span>
+                          </div>
+                          <p className="text-sm font-semibold text-slate-100 mt-1 font-mono">
+                            {tempMargin >= 0 ? `+${tempMargin.toFixed(1)} °C` : `${tempMargin.toFixed(1)} °C`} margin
+                          </p>
+                          <p className="text-[11px] text-slate-500 mt-0.5">
+                            R_th {rTh.toFixed(2)} K/W · τ {Math.round(tauSec)} s
+                          </p>
+                        </div>
+
+                        <div className="p-3 bg-slate-950 border border-slate-800 rounded-lg">
+                          <div className="flex items-center justify-between">
+                            <p className="text-[11px] text-slate-500">Expansion</p>
+                            <span className={`text-[11px] font-semibold ${expansionOk ? 'text-emerald-400' : 'text-amber-400'}`}>
+                              {expansionOk ? 'Absorbed' : 'Tight fit'}
+                            </span>
+                          </div>
+                          <p className="text-sm font-semibold text-slate-100 mt-1 font-mono">
+                            +{thermalExpMm.toFixed(2)} mm <span className="text-xs font-normal text-slate-400">({swellPct}% EOL)</span>
+                          </p>
+                          <p className="text-[11px] text-slate-500 mt-0.5">
+                            {currentEval.spacing.gapMm} mm cell gap ({totalGapBudgetMm.toFixed(1)} mm total)
+                          </p>
+                        </div>
+
+                        <div className="p-3 bg-slate-950 border border-slate-800 rounded-lg">
+                          <div className="flex items-center justify-between">
+                            <p className="text-[11px] text-slate-500">Thermal safeguard</p>
+                            <span className={`text-[11px] font-semibold ${safeguardActive ? 'text-emerald-400' : 'text-rose-400'}`}>
+                              {safeguardActive ? 'AIS-156 Ready' : 'At Risk'}
+                            </span>
+                          </div>
+                          <p className="text-sm font-semibold text-slate-100 mt-1 font-mono">
+                            {currentEval.bms.ntcCount} NTC · Trip {params.bmsTempTrip}°C
+                          </p>
+                          <p className="text-[11px] text-slate-500 mt-0.5 truncate" title={config.cooling}>
+                            {config.cooling.split(' (')[0]}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+              </div>
                 </div>
               </div>
 
