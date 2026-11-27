@@ -2077,11 +2077,7 @@ const exportSummary = () => {
                       <p className="text-[11px] text-slate-500">Branch current</p>
                       <p className="text-lg font-semibold text-slate-100">{cellVariationStats.maxBranchCurrentA.toFixed(1)} A max</p>
                     </div>
-                    <div>
-                      <p className="text-[11px] text-slate-500">Cell mass</p>
-                      <p className="text-lg font-semibold text-slate-100">{currentEval.cellMassTotal.toFixed(2)} kg</p>
-                    </div>
-                  </div>
+                    
                   <div>
                       <p className="text-[11px] text-slate-500">Cell mass</p>
                       <p className="text-lg font-semibold text-slate-100">{currentEval.cellMassTotal.toFixed(2)} kg</p>
