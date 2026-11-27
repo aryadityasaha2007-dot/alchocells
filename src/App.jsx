@@ -1112,10 +1112,11 @@ const applyRuleFix = (rule) => {
             bmsTier: 'Advanced (Active Balancing, CAN bus)'
           };
           const ev = evaluatePack(candDesign, params, evalOptions);
-          const isFeasible =
-            ev.usableEnergyAt1CWh >= appProfile.usableEnergyMinWh * 0.85 &&
+                 const isFeasible =
+            ev.usableEnergyAt1CWh >= appProfile.usableEnergyMinWh &&
             ev.tempAtStated1C <= appProfile.maxTemp1CCelsius &&
-            ev.totalMassEst <= appProfile.maxMassKg * 1.25 &&
+            ev.totalMassEst <= appProfile.maxMassKg &&
+            ev.chargeTimeMinutes <= appProfile.maxChargeTimeMin &&
             ev.contracts.criticalCount === 0;
 
           // Monte Carlo thermal/current violation risk under +-5°C ambient & +-4% IR spread
@@ -2203,6 +2204,11 @@ const exportSummary = () => {
                   >
                     Load Knee Pick into Option A
                   </button>
+                </div>
+              )}
+                {!paretoAnalysis.kneePick && (
+                <div className="bg-slate-900 rounded-md border border-slate-800 shadow-sm p-5 text-sm text-slate-300">
+                  No design in our search meets every requirement for this application yet. Try a different cell, more cells in parallel, or stronger cooling.
                 </div>
               )}
 
