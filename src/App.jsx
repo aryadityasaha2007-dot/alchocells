@@ -2151,9 +2151,7 @@ const exportSummary = () => {
                   })()}
                 </div>
               </div>
-                </div>
-              </div>
-
+             
               {/* DESIGN CONTRACT CHECKS (failures first, passing rows collapsible) */}
               <div className="bg-slate-900 rounded-xl border border-slate-800 shadow-sm overflow-hidden">
                 <div className="flex items-center justify-between px-6 py-4">
