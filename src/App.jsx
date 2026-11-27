@@ -558,7 +558,9 @@ function evaluatePack(design, conditions, options = {}) {
   // Usable Energy Calculation (Fixes D4, D5: Rate capability, DoD, cutoff, efficiency)
   const voltageDropAtLoad = I_load * (totalResistance / 1000);
   const dischargeEff = Math.max(0.72, Math.min(0.99, (packVoltage - voltageDropAtLoad) / packVoltage));
-  const peukertFactor = Math.max(0.74, Math.min(1.0, 1.0 - Math.max(0, conditions.cRate - 0.5) * (cell.family === 'LFP' ? 0.035 : 0.055)));
+  const peukertAt = (c) => Math.max(0.74, Math.min(1.0, 1.0 - Math.max(0, c - 0.5) * (cell.family === 'LFP' ? 0.035 : 0.055)));
+  const peukertFactor = peukertAt(conditions.cRate);
+  const peukertFactor1C = peukertAt(1.0);
   const effectiveVMin = cell.family === 'LFP' ? Math.max(cell.vMin, 2.65) : cell.vMin;
 const cutoffPenalty = Math.max(0.65, Math.min(1.0, 1.0 - Math.max(0, conditions.bmsVoltCutoff - effectiveVMin) * 0.32));
 
@@ -568,7 +570,7 @@ const cutoffPenalty = Math.max(0.65, Math.min(1.0, 1.0 - Math.max(0, conditions.
 
   const usableEnergyAt1CWh = modelMode === 'legacy'
     ? packEnergyWh
-    : Math.max(0, (packEnergyWh * bms.dodWindow * ((packVoltage - I_1C * (totalResistance / 1000)) / packVoltage) * cutoffPenalty) - (cooling.parasiticW * 0.8));
+    : Math.max(0, (packEnergyWh * bms.dodWindow * ((packVoltage - I_1C * (totalResistance / 1000)) / packVoltage) * peukertFactor1C * cutoffPenalty) - (cooling.parasiticW * 0.8));
 
   // Simplified CC-CV Charge Time Metric (Fixes C7)
   // Respects cell datasheet max charge current; 10%->90% (80% ΔSOC) with CC + CV taper factor (1.18x)
@@ -620,6 +622,7 @@ const cutoffPenalty = Math.max(0.65, Math.min(1.0, 1.0 - Math.max(0, conditions.
     totalResistance, I_load, cellCurrentA, qGen, qGen1C,
     rTh, cThJK, tauSec, steadyPeakTemp, tempAtStated1C,
     chargeTimeMinutes, maxSafeChargeC, effectiveCycles,
+    peukertFactor, dischargeEff, cutoffPenalty,
     lcos, capexPerKWhThroughput, fullLcosPerKWh, specificEnergyWhKg,
     cellVariationStats, contracts, scores
   };
@@ -706,10 +709,8 @@ function evaluateDesignContracts(ctx) {
     steadyPeakTemp, tempAtStated1C, packCostPerKWh, chargeTimeMinutes, totalMassEst, currency
   } = ctx;
 
-  const minReqParallel = Math.max(
-    Number(design.parallel) + 1,
-    Math.ceil((conditions.cRate * Number(design.parallel) * cell.capacity) / cell.maxContDischargeA)
-  );
+  // Cell current = C-rate x cell capacity, independent of parallel count, so the fix is a lower C-rate or a stronger cell.
+  const maxSafeCRate = Math.max(0.2, Math.floor((cell.maxContDischargeA / cell.capacity) * 10) / 10);
 
   const rules = [
     {
@@ -720,8 +721,8 @@ function evaluateDesignContracts(ctx) {
       measured: `${cellCurrentA.toFixed(1)} A/cell`,
       limit: `≤ ${cell.maxContDischargeA.toFixed(1)} A/cell`,
       source: cell.provenance,
-      fixHint: `Increase Parallel count (P) from ${design.parallel}P to ≥${minReqParallel}P or switch to Molicel P42A / A123 LFP.`,
-      fixPatch: { design: { parallel: minReqParallel } }
+      fixHint: `Cell current equals C-rate × cell capacity, so adding parallel cells does not reduce it. Lower the discharge C-rate to ${maxSafeCRate.toFixed(1)}C or less, or choose a higher-rated cell (e.g. Molicel P42A).`,
+      fixPatch: { params: { cRate: maxSafeCRate } }
     },
     {
       id: 'CON-BUS-02',
@@ -1112,12 +1113,15 @@ const applyRuleFix = (rule) => {
             bmsTier: 'Advanced (Active Balancing, CAN bus)'
           };
           const ev = evaluatePack(candDesign, params, evalOptions);
-                 const isFeasible =
-            ev.usableEnergyAt1CWh >= appProfile.usableEnergyMinWh &&
-            ev.tempAtStated1C <= appProfile.maxTemp1CCelsius &&
-            ev.totalMassEst <= appProfile.maxMassKg &&
-            ev.chargeTimeMinutes <= appProfile.maxChargeTimeMin &&
-            ev.contracts.criticalCount === 0;
+          const checks = [
+            ev.usableEnergyAt1CWh >= appProfile.usableEnergyMinWh,
+            ev.tempAtStated1C <= appProfile.maxTemp1CCelsius,
+            ev.totalMassEst <= appProfile.maxMassKg,
+            ev.chargeTimeMinutes <= appProfile.maxChargeTimeMin,
+            ev.contracts.criticalCount === 0
+          ];
+          const isFeasible = checks.every(Boolean);
+          const failCount = checks.filter(ok => !ok).length;
 
           // Monte Carlo thermal/current violation risk under +-5°C ambient & +-4% IR spread
           const tempMargin = appProfile.maxTemp1CCelsius - ev.tempAtStated1C;
@@ -1136,6 +1140,7 @@ const applyRuleFix = (rule) => {
             chargeMin: ev.chargeTimeMinutes,
             riskPct,
             isFeasible,
+            failCount,
             designObj: candDesign
           });
         });
@@ -1162,9 +1167,15 @@ const applyRuleFix = (rule) => {
           const bestScore = (best.usableWh / appProfile.usableEnergyMinWh) * 40 - (best.massKg / appProfile.maxMassKg) * 25 - (best.riskPct * 0.35);
           return curScore > bestScore ? cur : best;
         }, paretoFront[0])
-      : candidates[0];
+      : null; // never present an infeasible design as the recommendation
 
-    return { candidates: candidates.slice(0, 36), paretoFront, kneePick, sMid };
+    // If nothing is feasible, remember the closest miss so the page can say so honestly
+    const closest = kneePick ? null : candidates.reduce(
+      (b, c) => (c.failCount < b.failCount || (c.failCount === b.failCount && c.usableWh > b.usableWh)) ? c : b,
+      candidates[0]
+    );
+
+    return { candidates, paretoFront, kneePick, closest, sMid };
   }, [application, appProfile, params, evalOptions]);
 
   // Sensitivity Tornado Analysis: What moves Peak Temperature (°C) most?
@@ -1648,7 +1659,7 @@ const exportSummary = () => {
       });
 
       // Advance Coulomb-counted SOC with Peukert rate factor
-      const dSoc = ((I_step * dt) / (activeEval.packCapacity * 3600)) * 100 * (mode === 'charge' ? 0.98 : (1 / activeEval.peukertFactor || 1.04));
+      const dSoc = ((I_step * dt) / (activeEval.packCapacity * 3600)) * 100 * (mode === 'charge' ? 0.98 : (1 / activeEval.peukertFactor));
       currentSoc = mode === 'charge'
         ? Math.min(95, currentSoc + dSoc)
         : Math.max(0, currentSoc - dSoc);
@@ -2208,7 +2219,11 @@ const exportSummary = () => {
               )}
                 {!paretoAnalysis.kneePick && (
                 <div className="bg-slate-900 rounded-md border border-slate-800 shadow-sm p-5 text-sm text-slate-300">
-                  No design in our search meets every requirement for this application yet. Try a different cell, more cells in parallel, or stronger cooling.
+                  No design in our search meets every requirement for this application yet.
+                  {paretoAnalysis.closest && (
+                    <> Closest miss: {paretoAnalysis.closest.label} ({paretoAnalysis.closest.usableWh} Wh, {paretoAnalysis.closest.massKg} kg, {paretoAnalysis.closest.chargeMin} min charge), which still fails {paretoAnalysis.closest.failCount} requirement{paretoAnalysis.closest.failCount === 1 ? '' : 's'}.</>
+                  )}
+                  {' '}Try relaxing a limit, or add a larger or higher-energy cell option.
                 </div>
               )}
 
@@ -2302,7 +2317,7 @@ const exportSummary = () => {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="bg-slate-900 rounded-md border border-slate-800 shadow-sm p-6">
                   <h2 className="text-base font-semibold text-slate-100 mb-1">Pareto Design-Space Explorer (Usable Wh vs Mass kg)</h2>
-                  <p className="text-xs text-slate-400 mb-3">Enumerates candidate packs across chemistries & cooling; green points meet all SOA/thermal requirements</p>
+                  <p className="text-xs text-slate-400 mb-3">Enumerates candidate packs across chemistries & cooling; green = best feasible trade-offs, blue = feasible, red = fails at least one requirement</p>
                   <div className="h-72 w-full">
                     <ResponsiveContainer width="100%" height="100%">
                       <ScatterChart margin={{ top: 15, right: 20, left: 0, bottom: 10 }}>
@@ -2316,8 +2331,9 @@ const exportSummary = () => {
                           formatter={(val, name) => (name === 'BOM Cost' ? [money(val), name] : [val, name])}
                         />
                         <Legend wrapperStyle={{ fontSize: '12px', color: '#cbd5e1' }} />
-                        <Scatter name="Pareto Feasible Frontier" data={paretoAnalysis.candidates.filter(c => c.isFeasible)} fill="#10b981" />
-                        <Scatter name="Violates Thermal/SOA Limit" data={paretoAnalysis.candidates.filter(c => !c.isFeasible)} fill="#f43f5e" />
+                        <Scatter name="Pareto frontier (feasible)" data={paretoAnalysis.candidates.filter(c => c.isFeasible && c.isPareto)} fill="#10b981" />
+                        <Scatter name="Feasible, not on frontier" data={paretoAnalysis.candidates.filter(c => c.isFeasible && !c.isPareto)} fill="#38bdf8" />
+                        <Scatter name="Fails a requirement" data={paretoAnalysis.candidates.filter(c => !c.isFeasible)} fill="#f43f5e" />
                       </ScatterChart>
                     </ResponsiveContainer>
                   </div>
