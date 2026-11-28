@@ -2994,6 +2994,12 @@ const exportSummary = () => {
               TAB 5: BATTERY CYCLE LIFE & SWAPPING FLEET ECONOMICS
              ===================================================================== */}
           {activeTab === 'lifecycle' && (() => {
+      {activeTab === 'lifecycle' && (() => {
+  const m = appMetrics;
+  const u = m.u;
+  const usableKwh = m.usableKwh;
+
+  
             const usableKwh = Math.max(0.1, usableEnergyAt1CWh / 1000);
             const rangePerSwapKm = usableEnergyAt1CWh / 28; // 28 Wh/km e-scooter consumption
             const stationOpsMarginUsd = 0.28; // ~₹26/swap station capex & handling margin
