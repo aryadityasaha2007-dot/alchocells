@@ -2086,7 +2086,7 @@ const exportSummary = () => {
             >
         $ USD
             </button>
-          </div>
+        
           <button
             type="button"
             onClick={() => setLightMode(m => !m)}
