@@ -2809,11 +2809,7 @@ const exportSummary = () => {
     <strong className="text-slate-200">{cell.family} Piecewise Lookup</strong>
   </div>
 </div>
-                        <div>
-                          <span className="text-slate-500 block font-sans">Cell OCV Curve Model:</span>
-                          <strong className="text-slate-200">{cell.family} Piecewise Lookup</strong>
-                        </div>
-                      </div>
+                       
                     </div>
                   )}
                 </div>
