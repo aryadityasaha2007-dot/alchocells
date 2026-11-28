@@ -2793,15 +2793,22 @@ const exportSummary = () => {
                           <div className="bg-gradient-to-r from-red-500 via-yellow-500 to-emerald-500 h-2.5 transition-all duration-300" style={{ width: `${simData[simData.length - 1].soc}%` }}></div>
                         </div>
                       </div>
-                      <div className="grid grid-cols-3 gap-3 text-xs font-mono bg-slate-950 p-3 rounded border border-slate-800">
-                        <div>
-                          <span className="text-slate-500 block font-sans">Est. E-Scooter Range/Swap:</span>
-                          <strong className="text-emerald-400">{(usableEnergyAt1CWh / 28).toFixed(1)} km</strong> <span className="text-slate-500">(28 Wh/km)</span>
-                        </div>
-                        <div>
-                          <span className="text-slate-500 block font-sans">Swap Fleet Energy Cost/km:</span>
-                          <strong className="text-cyan-400">{money((fullLcosPerKWh * 28) / 1000, 4, 2)} / km</strong>
-                        </div>
+                     <div className={`grid ${isScooter ? 'grid-cols-3' : 'grid-cols-2'} gap-3 text-xs font-mono bg-slate-950 p-3 rounded border border-slate-800`}>
+  {isScooter && (
+    <div>
+      <span className="text-slate-500 block font-sans">Range / swap:</span>
+      <strong className="text-emerald-400">{appMetrics.perf.value}</strong> <span className="text-slate-500">({appMetrics.perf.sub})</span>
+    </div>
+  )}
+  <div>
+    <span className="text-slate-500 block font-sans">{appMetrics.unitCost.label}:</span>
+    <strong className="text-cyan-400">{appMetrics.unitCost.value}</strong>
+  </div>
+  <div>
+    <span className="text-slate-500 block font-sans">Cell OCV Curve Model:</span>
+    <strong className="text-slate-200">{cell.family} Piecewise Lookup</strong>
+  </div>
+</div>
                         <div>
                           <span className="text-slate-500 block font-sans">Cell OCV Curve Model:</span>
                           <strong className="text-slate-200">{cell.family} Piecewise Lookup</strong>
@@ -3154,37 +3161,34 @@ const exportSummary = () => {
                       <thead className="text-slate-400 uppercase bg-slate-950 border-b border-slate-800">
                         <tr>
                           <th className="px-4 py-3">Design Option</th>
-                          <th className="px-4 py-3">Effective Cycles</th>
-                          <th className="px-4 py-3">Service Life</th>
-                          <th className="px-4 py-3">Range / Swap</th>
-                          <th className="px-4 py-3">Cost / Swap</th>
-                          <th className="px-4 py-3">Running Cost</th>
+<th className="px-4 py-3">Effective Cycles</th>
+<th className="px-4 py-3">Service Life</th>
+{isScooter && <th className="px-4 py-3">Range / Swap</th>}
+<th className="px-4 py-3">Cost / {u.cycleNoun}</th>
+<th className="px-4 py-3">{m.unitCost.label}</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-800 text-slate-300 font-mono">
-                        {[
-                          { label: 'Baseline', ev: evalBaseline },
-                          { label: 'Option A', ev: evalOptionA },
-                          { label: 'Option B (LFP)', ev: evalOptionB }
-                        ].map(({ label, ev }) => {
-                          const kwh = Math.max(0.1, ev.usableEnergyAt1CWh / 1000);
-                          const km = ev.usableEnergyAt1CWh / 28;
-                          const swapCost = kwh * ev.fullLcosPerKWh + stationOpsMarginUsd;
-                          const yrs = ev.effectiveCycles / (365 * Math.max(0.5, swapsPerDay));
-                          return (
-                            <tr key={label} className="hover:bg-slate-800/40">
-                              <td className="px-4 py-3 font-sans font-bold text-slate-100">
-                                {label} ({ev.seriesCount}S{ev.parallelCount}P {ev.design.cellChemistry})
-                              </td>
-                              <td className="px-4 py-3">{ev.effectiveCycles.toLocaleString()} cyc</td>
-                              <td className="px-4 py-3 text-emerald-400 font-bold">{yrs.toFixed(1)} yrs</td>
-                              <td className="px-4 py-3">{km.toFixed(0)} km</td>
-                              <td className="px-4 py-3 text-cyan-400">{money(swapCost, 2, 1)}</td>
-                              <td className="px-4 py-3">{money(swapCost / Math.max(1, km), 4, 2)} / km</td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
+  {[
+    { label: 'Baseline', ev: evalBaseline },
+    { label: 'Option A', ev: evalOptionA },
+    { label: 'Option B (LFP)', ev: evalOptionB }
+  ].map(({ label, ev }) => {
+    const mm = getAppMetrics(application, ev, swapsPerDay, money);
+    return (
+      <tr key={label} className="hover:bg-slate-800/40">
+        <td className="px-4 py-3 font-sans font-bold text-slate-100">
+          {label} ({ev.seriesCount}S{ev.parallelCount}P {ev.design.cellChemistry})
+        </td>
+        <td className="px-4 py-3">{ev.effectiveCycles.toLocaleString()} cyc</td>
+        <td className="px-4 py-3 text-emerald-400 font-bold">{mm.lifeYears.toFixed(1)} yrs</td>
+        {isScooter && <td className="px-4 py-3">{mm.perf.value}</td>}
+        <td className="px-4 py-3 text-cyan-400">{money(mm.costPerCycleUsd, 2, 1)}</td>
+        <td className="px-4 py-3">{mm.unitCost.value}</td>
+      </tr>
+    );
+  })}
+</tbody>
                     </table>
                   </div>
                 </div>
