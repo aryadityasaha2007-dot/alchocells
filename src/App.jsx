@@ -1974,6 +1974,62 @@ const exportSummary = () => {
              ===================================================================== */}
           {activeTab === 'workbench' && (
             <div className="space-y-6">
+              {/* ITEM 1: DISMISSIBLE WELCOME STRIP */}
+              {showWelcome && (
+                <div className="bg-slate-900 border border-cyan-800/70 rounded-xl p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-sm">
+                  <div className="space-y-1.5">
+                    <p className="text-sm font-semibold text-slate-100">
+                      Design a battery pack, see which safety and performance rules it breaks, and fix it before you build.
+                    </p>
+                    <p className="text-xs text-slate-400">
+                      <span className="text-cyan-400 font-semibold">1.</span> Pick what you're powering.{' '}
+                      <span className="text-cyan-400 font-semibold">2.</span> Choose a design.{' '}
+                      <span className="text-cyan-400 font-semibold">3.</span> Fix anything red.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={dismissWelcome}
+                    className="px-4 py-2 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-slate-950 font-bold text-xs shrink-0 transition"
+                  >
+                    Got it
+                  </button>
+                </div>
+              )}
+
+              {/* ITEM 3: TOP VERDICT BANNER WITH JUMP-TO-FIXES */}
+              <div className={`rounded-xl border px-5 py-3.5 flex flex-wrap items-center justify-between gap-3 ${
+                failingRules.length === 0
+                  ? 'bg-emerald-950/40 border-emerald-800/70 text-emerald-300'
+                  : contracts.criticalCount > 0
+                  ? 'bg-rose-950/40 border-rose-800/70 text-rose-300'
+                  : 'bg-amber-950/40 border-amber-800/70 text-amber-300'
+              }`}>
+                <div className="flex items-center gap-2.5 text-sm font-semibold">
+                  {failingRules.length === 0 ? (
+                    <>
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                      <span>This pack meets all {contracts.rules.length} safety and performance checks.</span>
+                    </>
+                  ) : (
+                    <>
+                      <AlertTriangle className="w-4 h-4 shrink-0" />
+                      <span>
+                        {failingRules.length} {failingRules.length === 1 ? 'problem' : 'problems'} to fix ({contracts.criticalCount} critical, {contracts.warningCount} warning)
+                      </span>
+                    </>
+                  )}
+                </div>
+                {failingRules.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => contractSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                    className="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs font-semibold text-slate-100 transition"
+                  >
+                    Jump to fixes ↓
+                  </button>
+                )}
+              </div>
 
               {/* HEADLINE: design name + contract status */}
               <div className="flex flex-wrap items-end justify-between gap-3">
@@ -3201,7 +3257,33 @@ const exportSummary = () => {
             );
           })()}
 
-          
+          {/* ITEM 4: ASPEN-STYLE GUIDED NEXT STEP BAR */}
+          {(() => {
+            const nextSteps = {
+              workbench: { nextId: 'tradeoff', label: 'Next: compare your options →', hint: 'See how Baseline, Option A, and Option B trade off mass, cost, and safety.' },
+              tradeoff: { nextId: 'bms', label: 'Next: run transient simulation →', hint: 'Test voltage sag and temperature rise under constant C-rate, WMTC, or fast-charge.' },
+              bms: { nextId: 'traceability', label: 'Next: verify requirements & datasheets →', hint: 'Review compliance matrix, cell provenance, and safe bench validation steps.' },
+              traceability: { nextId: 'lifecycle', label: 'Next: check cycle life & economics →', hint: 'Estimate SOH degradation, service lifetime, and operating cost.' },
+              lifecycle: { nextId: 'workbench', label: 'Back to Design workbench →', hint: 'Refine your configuration or export the final engineering report.' }
+            };
+            const step = nextSteps[activeTab];
+            if (!step) return null;
+            return (
+              <div className="bg-slate-900 border border-slate-800 rounded-xl px-6 py-4 flex flex-wrap items-center justify-between gap-4">
+                <p className="text-xs text-slate-400">{step.hint}</p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTab(step.nextId);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  className="px-4 py-2 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-slate-950 font-bold text-xs transition shrink-0"
+                >
+                  {step.label}
+                </button>
+              </div>
+            );
+          })()}
         </div>
       </main>
 
