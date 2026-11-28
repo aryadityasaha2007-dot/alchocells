@@ -3031,20 +3031,22 @@ const exportSummary = () => {
                     <p className="text-xs text-slate-500 mt-1">To 80% SOH @ {steadyPeakTemp.toFixed(1)} °C peak</p>
                   </div>
                   <div className="p-5">
-                    <p className="text-xs text-slate-500">Fleet service lifetime</p>
-                    <p className="text-2xl font-bold text-emerald-400 mt-1">{batteryLifeYears.toFixed(1)} years</p>
-                    <p className="text-xs text-slate-500 mt-1">At {swapsPerDay.toFixed(1)} swaps/day ({Math.round(annualKm).toLocaleString()} km/yr)</p>
+                    <p className="text-xs text-slate-500">Service lifetime</p>
+                    <p className="text-2xl font-bold text-emerald-400 mt-1">{m.lifeYears.toFixed(1)} years</p>
+                    <p className="text-xs text-slate-500 mt-1">At {swapsPerDay.toFixed(1)} {u.perDayUnit} ({m.annualUsage})</p>
                   </div>
                   <div className="p-5">
-                    <p className="text-xs text-slate-500">Cost per battery swap</p>
-                    <p className="text-2xl font-bold text-cyan-400 mt-1">{money(costPerSwapUsd, 2, 1)}</p>
-                    <p className="text-xs text-slate-500 mt-1">{rangePerSwapKm.toFixed(0)} km range @ 28 Wh/km</p>
+                    <p className="text-xs text-slate-500">{m.costPerCycleLabel}</p>
+                    <p className="text-2xl font-bold text-cyan-400 mt-1">{money(m.costPerCycleUsd, 2, 1)}</p>
+                    <p className="text-xs text-slate-500 mt-1">{m.costPerCycleSub}</p>
                   </div>
                   <div className="p-5">
-                    <p className="text-xs text-slate-500">Running cost vs petrol</p>
-                    <p className="text-2xl font-bold text-slate-100 mt-1">{money(electricCostPerKmUsd, 4, 2)} / km</p>
-                    <p className={`text-xs mt-1 ${savingsPerKmUsd >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                      {savingsPerKmUsd >= 0 ? `Saves ${money(annualSavingsUsd, 0, 0)}/yr vs ${money(petrolCostPerKmUsd, 3, 2)}/km ICE` : 'Higher than petrol benchmark'}
+                    <p className="text-xs text-slate-500">{m.card4.label}</p>
+                    <p className="text-2xl font-bold text-slate-100 mt-1">{m.card4.value}</p>
+                    <p className={`text-xs mt-1 ${
+                      m.card4.tone === 'good' ? 'text-emerald-400' : m.card4.tone === 'bad' ? 'text-rose-400' : 'text-slate-500'
+                    }`}>
+                      {m.card4.sub}
                     </p>
                   </div>
                 </div>
@@ -3053,27 +3055,25 @@ const exportSummary = () => {
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                   <div className="lg:col-span-4 bg-slate-900 rounded-md border border-slate-800 shadow-sm p-6 space-y-5">
                     <h2 className="text-base font-semibold text-slate-100 border-b border-slate-800 pb-2">
-                      Swapping Fleet Duty Parameters
+                      Duty & Lifecycle Parameters
                     </h2>
 
                     <div>
                       <label htmlFor="slider-swapsPerDay" className="block text-sm font-medium text-slate-400 mb-1 flex justify-between">
-                        <span>Daily Swap Frequency</span>
-                        <span className="text-emerald-400 font-mono font-bold">{swapsPerDay.toFixed(1)} swaps/day</span>
+                        <span>{u.perDayLabel}</span>
+                        <span className="text-emerald-400 font-mono font-bold">{swapsPerDay.toFixed(1)} {u.perDayUnit}</span>
                       </label>
                       <input
                         id="slider-swapsPerDay"
                         type="range"
-                        min="1.0"
-                        max="4.0"
-                        step="0.5"
+                        min={u.min}
+                        max={u.max}
+                        step={u.step}
                         value={swapsPerDay}
                         onChange={(e) => setSwapsPerDay(parseFloat(e.target.value))}
                         className="w-full cursor-pointer accent-emerald-500 h-2 bg-slate-700 rounded-lg appearance-none"
                       />
-                      <p className="text-xs text-slate-500 mt-1">
-                        1.0/day = personal commuter · 2.5–4.0/day = commercial delivery fleet
-                      </p>
+                      <p className="text-xs text-slate-500 mt-1">{u.hint}</p>
                     </div>
 
                     <div className="bg-slate-950 p-4 rounded border border-slate-800 space-y-2 text-xs">
@@ -3114,7 +3114,7 @@ const exportSummary = () => {
                           <XAxis
                             dataKey="cycles"
                             tick={{ fill: '#94a3b8', fontSize: 11 }}
-                            label={{ value: 'Charge / Swap Cycles', position: 'insideBottom', offset: -8, fill: '#64748b', fontSize: 11 }}
+                            label={{ value: 'Charge / Discharge Cycles', position: 'insideBottom', offset: -8, fill: '#64748b', fontSize: 11 }}
                           />
                           <YAxis
                             domain={[70, 100]}
@@ -3146,7 +3146,7 @@ const exportSummary = () => {
                 <div className="bg-slate-900 rounded-md border border-slate-800 shadow-sm overflow-hidden">
                   <div className="px-6 py-4 border-b border-slate-800 bg-slate-800/50">
                     <h2 className="text-base font-semibold text-slate-100">
-                      Side-by-Side Swapping Fleet Lifecycle & Economics ({swapsPerDay.toFixed(1)} swaps/day)
+                      Side-by-Side Lifecycle & Economics ({swapsPerDay.toFixed(1)} {u.perDayUnit})
                     </h2>
                   </div>
                   <div className="overflow-x-auto">
@@ -3154,41 +3154,40 @@ const exportSummary = () => {
                       <thead className="text-slate-400 uppercase bg-slate-950 border-b border-slate-800">
                         <tr>
                           <th className="px-4 py-3">Design Option</th>
-<th className="px-4 py-3">Effective Cycles</th>
-<th className="px-4 py-3">Service Life</th>
-{isScooter && <th className="px-4 py-3">Range / Swap</th>}
-<th className="px-4 py-3">Cost / {u.cycleNoun}</th>
-<th className="px-4 py-3">{m.unitCost.label}</th>
+                          <th className="px-4 py-3">Effective Cycles</th>
+                          <th className="px-4 py-3">Service Life</th>
+                          <th className="px-4 py-3">{m.perf.label}</th>
+                          <th className="px-4 py-3">Cost / {u.cycleNoun}</th>
+                          <th className="px-4 py-3">{m.unitCost.label}</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-800 text-slate-300 font-mono">
-  {[
-    { label: 'Baseline', ev: evalBaseline },
-    { label: 'Option A', ev: evalOptionA },
-    { label: 'Option B (LFP)', ev: evalOptionB }
-  ].map(({ label, ev }) => {
-    const mm = getAppMetrics(application, ev, swapsPerDay, money);
-    return (
-      <tr key={label} className="hover:bg-slate-800/40">
-        <td className="px-4 py-3 font-sans font-bold text-slate-100">
-          {label} ({ev.seriesCount}S{ev.parallelCount}P {ev.design.cellChemistry})
-        </td>
-        <td className="px-4 py-3">{ev.effectiveCycles.toLocaleString()} cyc</td>
-        <td className="px-4 py-3 text-emerald-400 font-bold">{mm.lifeYears.toFixed(1)} yrs</td>
-        {isScooter && <td className="px-4 py-3">{mm.perf.value}</td>}
-        <td className="px-4 py-3 text-cyan-400">{money(mm.costPerCycleUsd, 2, 1)}</td>
-        <td className="px-4 py-3">{mm.unitCost.value}</td>
-      </tr>
-    );
-  })}
-</tbody>
+                        {[
+                          { label: 'Baseline', ev: evalBaseline },
+                          { label: 'Option A', ev: evalOptionA },
+                          { label: 'Option B (LFP)', ev: evalOptionB }
+                        ].map(({ label, ev }) => {
+                          const mm = getAppMetrics(application, ev, swapsPerDay, money);
+                          return (
+                            <tr key={label} className="hover:bg-slate-800/40">
+                              <td className="px-4 py-3 font-sans font-bold text-slate-100">
+                                {label} ({ev.seriesCount}S{ev.parallelCount}P {ev.design.cellChemistry})
+                              </td>
+                              <td className="px-4 py-3">{ev.effectiveCycles.toLocaleString()} cyc</td>
+                              <td className="px-4 py-3 text-emerald-400 font-bold">{mm.lifeYears.toFixed(1)} yrs</td>
+                              <td className="px-4 py-3">{mm.perf.value}</td>
+                              <td className="px-4 py-3 text-cyan-400">{money(mm.costPerCycleUsd, 2, 1)}</td>
+                              <td className="px-4 py-3">{mm.unitCost.value}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
                     </table>
                   </div>
                 </div>
               </div>
             );
           })()}
-
 
           
         </div>
