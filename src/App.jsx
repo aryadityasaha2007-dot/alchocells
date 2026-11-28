@@ -981,6 +981,7 @@ React.useEffect(() => {
   const [currency, setCurrency] = useState('INR');        // 'INR' | 'USD' (display only)
   const [showLegacyInfo, setShowLegacyInfo] = useState(false);
   const [showPassing, setShowPassing] = useState(false);
+  const [expertMode, setExpertMode] = useState(false);
   const [showWelcome, setShowWelcome] = useState(() => {
     try { return localStorage.getItem('alchocells_welcome_dismissed') !== 'true'; } catch (e) { return true; }
   });
@@ -1857,44 +1858,220 @@ const exportSummary = () => {
         </div>
 
         {/* Stage 6/7 Audit Controls: Physics-Corrected vs Legacy Toggle + Cost Basis Toggle */}
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center bg-slate-950 p-1 rounded border border-slate-800 text-xs">
-            <span className="text-slate-400 px-2">Model:</span>
-            <button
-              type="button"
-              onClick={() => setModelMode('physics')}
-              className={`px-2.5 py-1 rounded font-semibold transition ${modelMode === 'physics' ? 'bg-cyan-600 text-slate-950' : 'text-slate-400 hover:text-white'}`}
-            >
-              Physics-Corrected
-            </button>
-            <button
-              type="button"
-              onClick={() => { setModelMode('legacy'); setShowLegacyInfo(true); }}
-              className={`px-2.5 py-1 rounded font-semibold transition ${modelMode === 'legacy' ? 'bg-amber-500 text-slate-950' : 'text-slate-400 hover:text-white'}`}
-            >
-              Legacy
-            </button>
-          </div>
+   {/* Configuration card (Executive Cards + Simple/Expert Split) */}
+                <div className="bg-slate-900 rounded-xl border border-slate-800 shadow-sm p-6 space-y-5">
 
-          <div className="flex items-center bg-slate-950 p-1 rounded border border-slate-800 text-xs">
-            <span className="text-slate-400 px-2">Pricing:</span>
-            <button
-              type="button"
-              onClick={() => setCostBasis('volume')}
-              className={`px-2.5 py-1 rounded font-semibold transition ${costBasis === 'volume' ? 'bg-emerald-600 text-slate-950' : 'text-slate-400 hover:text-white'}`}
-            >
-              Volume OEM (BNEF)
-            </button>
-            <button
-              type="button"
-              onClick={() => setCostBasis('retail')}
-              className={`px-2.5 py-1 rounded font-semibold transition ${costBasis === 'retail' ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white'}`}
-            >
-              Retail
-            </button>
-          </div>
-<div className="flex items-center bg-slate-950 p-1 rounded border border-slate-800 text-xs" title={`1 USD = ₹${USD_TO_INR}`}>
-            <span className="text-slate-400 px-2">Currency:</span>
+                  {/* Step 1: Target Application */}
+                  <div>
+                    <div className="flex items-center justify-between mb-2.5">
+                      <p className="text-[11px] uppercase tracking-widest text-slate-400 font-semibold">
+                        1. Target Application
+                      </p>
+                      <span className="text-[11px] text-slate-500">{appProfile.safetyStandard}</span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      {[
+                        { id: 'Swappable 48V E-Scooter Module', title: '48V E-Scooter Module', meta: '≥1200 Wh · ≤13.5 kg · AIS-156' },
+                        { id: '24V ICU Medical Cart Backup', title: '24V ICU Medical Cart', meta: '≥550 Wh · ≤45 °C · Hospital indoor' },
+                        { id: '22.2V Agricultural Drone Pack', title: '22.2V Agricultural Drone', meta: '≥350 Wh · ≤5.0 kg · ≤35 min charge' },
+                        { id: '48V Microgrid Rack', title: '48V Microgrid Rack', meta: '≥4000 Wh · Stationary LFP storage' }
+                      ].map(app => {
+                        const active = config.application === app.id;
+                        return (
+                          <button
+                            key={app.id}
+                            type="button"
+                            onClick={() => { setApplication(app.id); setSimData([]); }}
+                            className={`text-left p-3 rounded-lg border transition-all ${
+                              active
+                                ? 'bg-cyan-950/35 border-cyan-500/80 text-slate-100 shadow-sm'
+                                : 'bg-slate-950/80 border-slate-800 text-slate-400 hover:border-slate-700 hover:text-slate-200'
+                            }`}
+                          >
+                            <div className="text-xs font-semibold tracking-tight">{app.title}</div>
+                            <div className="text-[11px] text-slate-500 mt-0.5">{app.meta}</div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Step 2: Architecture Variant */}
+                  <div className="border-t border-slate-800 pt-4">
+                    <p className="text-[11px] uppercase tracking-widest text-slate-400 font-semibold mb-2.5">
+                      2. Architecture Variant
+                    </p>
+                    <div className="space-y-2">
+                      {[
+                        {
+                          id: 'Baseline Starting Design',
+                          title: 'Baseline',
+                          desc: 'Standard NMC cells · Passive natural convection',
+                          ev: evalBaseline
+                        },
+                        {
+                          id: 'Option A (High Energy, Active Cooling)',
+                          title: 'Option A · High Energy',
+                          desc: 'High-discharge NMC · Forced-air thermal management',
+                          ev: evalOptionA
+                        },
+                        {
+                          id: 'Option B (High Power, LFP Chemistry)',
+                          title: 'Option B · Long-Life LFP',
+                          desc: 'LFP chemistry · High cycle durability & thermal margin',
+                          ev: evalOptionB
+                        }
+                      ].map(opt => {
+                        const active = config.designSelection === opt.id;
+                        const crits = opt.ev.contracts.criticalCount;
+                        const warns = opt.ev.contracts.warningCount;
+                        return (
+                          <button
+                            key={opt.id}
+                            type="button"
+                            onClick={() => { setDesignSelection(opt.id); setSimData([]); }}
+                            className={`w-full text-left p-3 rounded-lg border transition-all flex items-center justify-between gap-3 ${
+                              active
+                                ? 'bg-cyan-950/35 border-cyan-500/80 shadow-sm'
+                                : 'bg-slate-950/80 border-slate-800 hover:border-slate-700'
+                            }`}
+                          >
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className={`text-xs font-semibold ${active ? 'text-cyan-300' : 'text-slate-200'}`}>
+                                  {opt.title}
+                                </span>
+                                <span className="text-[11px] font-mono text-slate-500">
+                                  {opt.ev.seriesCount}S{opt.ev.parallelCount}P · {opt.ev.design.cellChemistry}
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-slate-400 mt-0.5">{opt.desc}</p>
+                            </div>
+                            <span className={`text-[11px] font-medium px-2.5 py-0.5 rounded-full shrink-0 border ${
+                              crits === 0 && warns === 0
+                                ? 'bg-emerald-950/80 text-emerald-400 border-emerald-800/80'
+                                : crits === 0
+                                ? 'bg-amber-950/80 text-amber-300 border-amber-800/80'
+                                : 'bg-rose-950/80 text-rose-300 border-rose-800/80'
+                            }`}>
+                              {crits === 0 && warns === 0 ? 'Compliant' : crits === 0 ? `${warns} warning` : `${crits} critical`}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Step 3: Subsystem Specification (Simple Summary vs Expert Controls) */}
+                  {!expertMode ? (
+                    <div className="border-t border-slate-800 pt-4 flex items-center justify-between gap-3 bg-slate-950/60 p-3.5 rounded-lg border border-slate-800/80">
+                      <div className="text-xs text-slate-400">
+                        <span className="text-slate-200 font-medium block">Subsystem parameters locked to preset</span>
+                        <span>Switch to Expert view to edit series/parallel topology, cooling, busbars, or BMS.</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setExpertMode(true)}
+                        className="px-3 py-1.5 rounded-md bg-slate-800 hover:bg-slate-700 border border-slate-700 text-cyan-300 font-semibold text-xs shrink-0 transition"
+                      >
+                        Customize
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="border-t border-slate-800 pt-4 space-y-3.5">
+                        <div className="flex items-center justify-between">
+                          <p className="text-[11px] uppercase tracking-widest text-slate-400 font-semibold">3. Cell & Topology</p>
+                          <button
+                            type="button"
+                            onClick={() => setExpertMode(false)}
+                            className="text-[11px] text-slate-500 hover:text-slate-300"
+                          >
+                            Collapse parameters
+                          </button>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                          <div>
+                            <label htmlFor="select-cellChemistry" className="block text-[11px] text-slate-400 mb-1">Cell chemistry</label>
+                            <select id="select-cellChemistry" name="cellChemistry" value={config.cellChemistry} onChange={handleConfigChange} className="w-full p-2 bg-slate-800 border border-slate-700 text-slate-200 rounded-md focus:ring-2 focus:ring-cyan-500 outline-none text-xs">
+                              <option>Samsung 35E</option>
+                              <option>Molicel P42A</option>
+                              <option>A123 26650 LFP</option>
+                              <option>EVE LF50K</option>
+                            </select>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <label htmlFor="input-series" className="block text-[11px] text-slate-400 mb-1">Series (S)</label>
+                              <input id="input-series" type="number" name="series" value={config.series} onChange={handleConfigChange} min="1" max="100" className="w-full p-2 bg-slate-800 border border-slate-700 text-slate-200 rounded-md focus:ring-2 focus:ring-cyan-500 outline-none text-xs font-mono" />
+                            </div>
+                            <div>
+                              <label htmlFor="input-parallel" className="block text-[11px] text-slate-400 mb-1">Parallel (P)</label>
+                              <input id="input-parallel" type="number" name="parallel" value={config.parallel} onChange={handleConfigChange} min="1" max="100" className="w-full p-2 bg-slate-800 border border-slate-700 text-slate-200 rounded-md focus:ring-2 focus:ring-cyan-500 outline-none text-xs font-mono" />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="border-t border-slate-800 pt-4 space-y-3.5">
+                        <p className="text-[11px] uppercase tracking-widest text-slate-400 font-semibold">4. Subsystems</p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                          <div>
+                            <label htmlFor="select-busbars" className="block text-[11px] text-slate-400 mb-1">Interconnect busbars</label>
+                            <select id="select-busbars" name="busbars" value={config.busbars} onChange={handleConfigChange} className="w-full p-2 bg-slate-800 border border-slate-700 text-slate-200 rounded-md focus:ring-2 focus:ring-cyan-500 outline-none text-xs">
+                              <option>Nickel Strips (0.15mm)</option>
+                              <option>Copper-Nickel Sandwich (0.2mm)</option>
+                              <option>Laser-welded Aluminum</option>
+                              <option>Heavy Copper Busbars (Prismatic)</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label htmlFor="select-cooling" className="block text-[11px] text-slate-400 mb-1">Thermal management</label>
+                            <select id="select-cooling" name="cooling" value={config.cooling} onChange={handleConfigChange} className="w-full p-2 bg-slate-800 border border-slate-700 text-slate-200 rounded-md focus:ring-2 focus:ring-cyan-500 outline-none text-xs">
+                              <option>Passive (Natural Convection)</option>
+                              <option>Active Air (Forced Fans)</option>
+                              <option>Liquid Cooling Plate (Bottom)</option>
+                              <option>Phase Change Material (PCM)</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label htmlFor="select-spacing" className="block text-[11px] text-slate-400 mb-1">Cell holder spacing</label>
+                            <select id="select-spacing" name="spacing" value={config.spacing} onChange={handleConfigChange} className="w-full p-2 bg-slate-800 border border-slate-700 text-slate-200 rounded-md focus:ring-2 focus:ring-cyan-500 outline-none text-xs">
+                              <option>1.5mm Compact Holders</option>
+                              <option>2mm Cylindrical Holders</option>
+                              <option>3.5mm AIS-156 Thermal Gap</option>
+                              <option>5mm High-Airflow Matrix</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label htmlFor="select-bmsTier" className="block text-[11px] text-slate-400 mb-1">BMS architecture</label>
+                            <select id="select-bmsTier" name="bmsTier" value={config.bmsTier} onChange={handleConfigChange} className="w-full p-2 bg-slate-800 border border-slate-700 text-slate-200 rounded-md focus:ring-2 focus:ring-cyan-500 outline-none text-xs">
+                              <option>Standard (Passive Balancing)</option>
+                              <option>Advanced (Active Balancing, CAN bus)</option>
+                              <option>Automotive-Grade (ASIL-C, Dual MCU)</option>
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Derived thermal & economic strip */}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-4 border-t border-slate-800 text-xs">
+                        <div className="p-2.5 bg-slate-950 border border-slate-800 rounded-md" title="Thermal resistance (K/W) and thermal time constant (seconds)">
+                          <span className="text-slate-500 block text-[11px]">Thermal R_th & τ:</span>
+                          <span className="font-mono text-cyan-400 font-semibold">{rTh.toFixed(2)} K/W · {Math.round(tauSec)} s</span>
+                        </div>
+                        <div className="p-2.5 bg-slate-950 border border-slate-800 rounded-md" title="Capital cost per lifetime kWh delivered">
+                          <span className="text-slate-500 block text-[11px]">Throughput cost:</span>
+                          <span className="font-mono text-emerald-400 font-semibold">{money(lcos, 3, 2)}/kWh (LCOS {money(fullLcosPerKWh, 2)})</span>
+                        </div>
+                        <div className="p-2.5 bg-slate-950 border border-slate-800 rounded-md" title="10% to 90% constant-current / constant-voltage charge duration">
+                          <span className="text-slate-500 block text-[11px]">CC-CV charge (10–90%):</span>
+                          <span className="font-mono text-slate-200 font-semibold">{chargeTimeMinutes} min (≤{cell.maxChargeA}A)</span>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
             <button
               type="button"
               onClick={() => setCurrency('INR')}
