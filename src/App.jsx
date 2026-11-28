@@ -981,6 +981,14 @@ React.useEffect(() => {
   const [currency, setCurrency] = useState('INR');        // 'INR' | 'USD' (display only)
   const [showLegacyInfo, setShowLegacyInfo] = useState(false);
   const [showPassing, setShowPassing] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(() => {
+    try { return localStorage.getItem('alchocells_welcome_dismissed') !== 'true'; } catch (e) { return true; }
+  });
+  const dismissWelcome = () => {
+    setShowWelcome(false);
+    try { localStorage.setItem('alchocells_welcome_dismissed', 'true'); } catch (e) {}
+  };
+  const contractSectionRef = React.useRef(null);
   const [swapsPerDay, setSwapsPerDay] = useState(2.5);
 
   // Active Application & Active Slot ('Baseline Starting Design' | 'Option A...' | 'Option B...')
