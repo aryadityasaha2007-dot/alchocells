@@ -242,6 +242,8 @@ const APPLICATION_PROFILES = {
   'Swappable 48V E-Scooter Module': {
     id: 'Swappable 48V E-Scooter Module',
     roleBadge: 'Primary Deep-Dive Scope (AIS-156 + NITI Aayog Swap Policy)',
+    safetyStandard: 'AIS-156 Rev 3',
+specSource: 'AIS-156 Amendment 3 · NITI Aayog Battery Swapping Policy',
     vMinReq: 44.0,
     vMaxReq: 54.0,
     usableEnergyMinWh: 1200,
@@ -283,6 +285,8 @@ const APPLICATION_PROFILES = {
   '24V ICU Medical Cart Backup': {
     id: '24V ICU Medical Cart Backup',
     roleBadge: 'Platform Reuse Proof #1 (Hospital Indoor Backup)',
+    safetyStandard: 'IEC 62133-2',
+specSource: 'IEC 62133-2 · IEC 60601-1 (medical electrical equipment)',
     vMinReq: 22.0,
     vMaxReq: 28.0,
     usableEnergyMinWh: 550,
@@ -324,6 +328,8 @@ const APPLICATION_PROFILES = {
   '22.2V Agricultural Drone Pack': {
     id: '22.2V Agricultural Drone Pack',
     roleBadge: 'Platform Reuse Proof #2 (High C-Rate Flight)',
+    safetyStandard: 'IEC 62133-2',
+specSource: 'IEC 62133-2 · UN 38.3 (transport testing)',
     vMinReq: 20.0,
     vMaxReq: 25.2,
     usableEnergyMinWh:350,
@@ -365,6 +371,8 @@ const APPLICATION_PROFILES = {
   '48V Microgrid Rack': {
     id: '48V Microgrid Rack',
     roleBadge: 'Platform Reuse Proof #3 (Stationary Prismatic LFP)',
+    safetyStandard: 'IEC 62619',
+specSource: 'IEC 62619 · UL 9540 (stationary energy storage)',
     vMinReq: 46.0,
     vMaxReq: 54.0,
     usableEnergyMinWh: 4000,
@@ -828,6 +836,93 @@ function generateWmtcDutyFactor(stepIdx, totalSteps) {
 }
 
 // ============================================================================
+const APP_USAGE = {
+  'Swappable 48V E-Scooter Module': {
+    kind: 'scooter', perDayLabel: 'Daily swap frequency', perDayUnit: 'swaps/day', cycleNoun: 'swap',
+    min: 1, max: 4, step: 0.5, def: 2.5,
+    hint: '1.0/day = personal commuter · 2.5–4.0/day = commercial delivery fleet',
+    whPerKm: 28, petrolInrPerKm: 2.40, stationMarginUsd: 0.28
+  },
+  '24V ICU Medical Cart Backup': {
+    kind: 'icu', perDayLabel: 'Discharge cycles per day', perDayUnit: 'cycles/day', cycleNoun: 'backup cycle',
+    min: 0.5, max: 2, step: 0.5, def: 1,
+    hint: '0.5/day = occasional outages · 2.0/day = continuous mobile use',
+    loadW: 120, stationMarginUsd: 0 // loadW is an assumed average cart load
+  },
+  '22.2V Agricultural Drone Pack': {
+    kind: 'drone', perDayLabel: 'Flights per day', perDayUnit: 'flights/day', cycleNoun: 'flight',
+    min: 2, max: 12, step: 1, def: 6,
+    hint: '2–4/day = small farm · 8–12/day = contract spraying',
+    avgPowerW: 900, stationMarginUsd: 0 // avgPowerW is an assumed average flight draw
+  },
+  '48V Microgrid Rack': {
+    kind: 'microgrid', perDayLabel: 'Cycles per day', perDayUnit: 'cycles/day', cycleNoun: 'cycle',
+    min: 0.5, max: 1.5, step: 0.5, def: 1,
+    hint: '1.0/day = daily solar shifting',
+    stationMarginUsd: 0
+  }
+};
+
+function getAppMetrics(application, ev, perDay, money) {
+  const u = APP_USAGE[application] || APP_USAGE['Swappable 48V E-Scooter Module'];
+  const usableWh = ev.usableEnergyAt1CWh;
+  const usableKwh = Math.max(0.1, usableWh / 1000);
+  const costPerCycleUsd = usableKwh * ev.fullLcosPerKWh + (u.stationMarginUsd || 0);
+  const lifeYears = ev.effectiveCycles / (365 * Math.max(0.5, perDay));
+  const common = { u, usableKwh, costPerCycleUsd, lifeYears };
+
+  if (u.kind === 'icu') {
+    const hrs = usableWh / u.loadW;
+    return { ...common,
+      annualUsage: `${Math.round(perDay * 365)} cycles/yr`,
+      costPerCycleLabel: 'Cost per backup cycle',
+      costPerCycleSub: `${hrs.toFixed(1)} h runtime @ ${u.loadW} W`,
+      perf: { label: 'Runtime hrs', value: `${hrs.toFixed(1)} hrs`, sub: `${u.loadW} W avg load` },
+      unitCost: { label: 'Energy cost / hour', value: `${money(costPerCycleUsd / Math.max(0.1, hrs), 3, 2)} / hr` },
+      card4: { label: 'Backup runtime', value: `${hrs.toFixed(1)} hrs`, tone: 'neutral', sub: `At ${u.loadW} W average cart load` }
+    };
+  }
+  if (u.kind === 'drone') {
+    const mins = (usableWh / u.avgPowerW) * 60;
+    return { ...common,
+      annualUsage: `${Math.round(perDay * 365).toLocaleString()} flights/yr`,
+      costPerCycleLabel: 'Cost per flight',
+      costPerCycleSub: `${mins.toFixed(0)} min flight @ ${u.avgPowerW} W`,
+      perf: { label: 'Flight mins', value: `${mins.toFixed(0)} min`, sub: `${u.avgPowerW} W avg draw` },
+      unitCost: { label: 'Energy cost / flight', value: `${money(costPerCycleUsd, 2, 1)} / flight` },
+      card4: { label: 'Flight time', value: `${mins.toFixed(0)} min`, tone: 'neutral', sub: `At ${u.avgPowerW} W average draw` }
+    };
+  }
+  if (u.kind === 'microgrid') {
+    const dailyKwh = usableKwh * perDay;
+    return { ...common,
+      annualUsage: `${Math.round(dailyKwh * 365).toLocaleString()} kWh/yr`,
+      costPerCycleLabel: 'Cost per cycle',
+      costPerCycleSub: `${usableKwh.toFixed(1)} kWh per cycle`,
+      perf: { label: 'Daily kWh shifted', value: `${dailyKwh.toFixed(1)} kWh`, sub: `${perDay.toFixed(1)} cycles/day` },
+      unitCost: { label: 'LCOE (storage)', value: `${money(ev.fullLcosPerKWh, 3, 2)} / kWh` },
+      card4: { label: 'Levelized cost (LCOE)', value: `${money(ev.fullLcosPerKWh, 3, 2)} / kWh`, tone: 'neutral', sub: `${dailyKwh.toFixed(1)} kWh shifted/day` }
+    };
+  }
+  // E-Scooter
+  const km = usableWh / u.whPerKm;
+  const costPerKmUsd = costPerCycleUsd / Math.max(1, km);
+  const petrolUsd = u.petrolInrPerKm / USD_TO_INR;
+  const savingsUsd = petrolUsd - costPerKmUsd;
+  const annualKm = km * perDay * 365;
+  return { ...common,
+    annualUsage: `${Math.round(annualKm).toLocaleString()} km/yr`,
+    costPerCycleLabel: 'Cost per battery swap',
+    costPerCycleSub: `${km.toFixed(0)} km range @ ${u.whPerKm} Wh/km`,
+    perf: { label: 'Range / swap', value: `${km.toFixed(0)} km`, sub: `${u.whPerKm} Wh/km` },
+    unitCost: { label: 'Energy cost / km', value: `${money(costPerKmUsd, 4, 2)} / km` },
+    card4: {
+      label: 'Running cost vs petrol', value: `${money(costPerKmUsd, 4, 2)} / km`,
+      tone: savingsUsd >= 0 ? 'good' : 'bad',
+      sub: savingsUsd >= 0 ? `Saves ${money(savingsUsd * annualKm, 0, 0)}/yr vs ${money(petrolUsd, 3, 2)}/km ICE` : 'Higher than petrol benchmark'
+    }
+  };
+}
 // MAIN REACT COMPONENT
 // ============================================================================
 export default function App() {
@@ -891,6 +986,9 @@ React.useEffect(() => {
   // Active Application & Active Slot ('Baseline Starting Design' | 'Option A...' | 'Option B...')
   const [application, setApplication] = useState('Swappable 48V E-Scooter Module');
   const [designSelection, setDesignSelection] = useState('Baseline Starting Design');
+  React.useEffect(() => {
+  setSwapsPerDay((APP_USAGE[application] || APP_USAGE['Swappable 48V E-Scooter Module']).def);
+}, [application]);
 
   // All 3 Design Slots stored as live configurations per application (Fixes D1/C1)
   const [allAppDesigns, setAllAppDesigns] = useState(() => {
@@ -962,6 +1060,8 @@ React.useEffect(() => {
 
   // Money helpers (one currency at a time) and chart cost scaling
   const money = (usd, usdDigits = 0, inrDigits = usdDigits) => fmtMoney(usd, currency, usdDigits, inrDigits);
+  const isScooter = application.includes('Scooter');
+const appMetrics = getAppMetrics(application, currentEval, swapsPerDay, money);
   const currencySymbol = currency === 'INR' ? '₹' : '$';
   const costChart = (usd) => (currency === 'INR' ? Math.round((usd * USD_TO_INR) / 100) / 10 : Math.round(usd)); // ₹ thousand or $
 
