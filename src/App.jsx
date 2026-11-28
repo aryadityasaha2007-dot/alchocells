@@ -2994,22 +2994,13 @@ const exportSummary = () => {
               TAB 5: BATTERY CYCLE LIFE & SWAPPING FLEET ECONOMICS
              ===================================================================== */}
           {activeTab === 'lifecycle' && (() => {
-      {activeTab === 'lifecycle' && (() => {
+   
   const m = appMetrics;
   const u = m.u;
   const usableKwh = m.usableKwh;
 
   
-            const usableKwh = Math.max(0.1, usableEnergyAt1CWh / 1000);
-            const rangePerSwapKm = usableEnergyAt1CWh / 28; // 28 Wh/km e-scooter consumption
-            const stationOpsMarginUsd = 0.28; // ~₹26/swap station capex & handling margin
-            const costPerSwapUsd = usableKwh * fullLcosPerKWh + stationOpsMarginUsd;
-            const batteryLifeYears = effectiveCycles / (365 * Math.max(0.5, swapsPerDay));
-            const electricCostPerKmUsd = costPerSwapUsd / Math.max(1, rangePerSwapKm);
-            const petrolCostPerKmUsd = 2.40 / USD_TO_INR; // ₹2.40/km petrol scooter benchmark
-            const savingsPerKmUsd = petrolCostPerKmUsd - electricCostPerKmUsd;
-            const annualKm = rangePerSwapKm * swapsPerDay * 365;
-            const annualSavingsUsd = savingsPerKmUsd * annualKm;
+            
 
             // SOH degradation curve comparing Baseline, Option A, and Option B
             const maxCycPlot = Math.max(
