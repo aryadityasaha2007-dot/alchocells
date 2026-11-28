@@ -2084,16 +2084,16 @@ const exportSummary = () => {
               onClick={() => setCurrency('USD')}
               className={`px-2.5 py-1 rounded font-semibold transition ${currency === 'USD' ? 'bg-cyan-600 text-slate-950' : 'text-slate-400 hover:text-white'}`}
             >
-              $ USD
+        $ USD
             </button>
           </div>
-<button
-  type="button"
-  onClick={() => setLightMode(m => !m)}
-  className="px-3 py-2 rounded text-xs font-bold border border-slate-700 bg-slate-800 text-slate-200"
->
-  {lightMode ? 'Dark mode' : 'Light mode'}
-</button>
+          <button
+            type="button"
+            onClick={() => setLightMode(m => !m)}
+            className="px-3 py-2 rounded text-xs font-bold border border-slate-700 bg-slate-800 text-slate-200"
+          >
+            {lightMode ? 'Dark mode' : 'Light mode'}
+          </button>
           {copySuccess && <span className="text-emerald-400 text-sm flex items-center"><CheckCircle2 className="w-4 h-4 mr-1"/> {copySuccess}</span>}
           <button
             type="button"
