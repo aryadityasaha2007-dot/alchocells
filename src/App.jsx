@@ -1936,27 +1936,31 @@ const exportSummary = () => {
       </header>
 
       {/* TABS NAVIGATION (Accessible role="tablist") */}
-      <div role="tablist" aria-label="Platform Views" className="sticky top-0 z-30 bg-slate-900 border-b border-slate-800 px-6 flex space-x-1 overflow-x-auto shrink-0">
+     {/* TABS NAVIGATION (Plain titles + one-line purpose) */}
+      <div role="tablist" aria-label="Platform Views" className="sticky top-0 z-30 bg-slate-900 border-b border-slate-800 px-6 flex space-x-2 overflow-x-auto shrink-0">
         {[
-          { id: 'workbench', icon: Settings, label: 'Multi-Domain Workbench' },
-          { id: 'tradeoff', icon: BarChart2, label: 'Design Trade-Off Comparison' },
-          { id: 'bms', icon: Cpu, label: 'Subsystem Parameter Exchange' },
-          { id: 'traceability', icon: FileText, label: 'Traceability & Datasheets' },
-      { id: 'lifecycle', icon: Battery, label: 'Cycle Life & Fleet Economics' },
+          { id: 'workbench', icon: Settings, label: 'Design', desc: 'Configure pack & fix rule violations' },
+          { id: 'tradeoff', icon: BarChart2, label: 'Compare', desc: 'Side-by-side options & Pareto frontier' },
+          { id: 'bms', icon: Cpu, label: 'Simulate', desc: 'Run discharge, WMTC & charge cycles' },
+          { id: 'traceability', icon: FileText, label: 'Evidence', desc: 'Requirements matrix & cell datasheets' },
+          { id: 'lifecycle', icon: Battery, label: 'Lifetime', desc: 'Cycle life, SOH & fleet economics' },
         ].map((tab) => (
           <button
             key={tab.id}
             role="tab"
             aria-selected={activeTab === tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+            className={`flex items-start gap-2.5 px-4 py-3 text-left border-b-2 transition-colors whitespace-nowrap ${
               activeTab === tab.id
                 ? 'border-cyan-500 text-cyan-400 bg-slate-800/50'
                 : 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-800'
             }`}
           >
-            <tab.icon className="w-4 h-4 mr-2" />
-            {tab.label}
+            <tab.icon className="w-4 h-4 mt-0.5 shrink-0" />
+            <div>
+              <div className="text-sm font-semibold leading-tight">{tab.label}</div>
+              <div className="text-[11px] font-normal text-slate-500 leading-tight mt-0.5">{tab.desc}</div>
+            </div>
           </button>
         ))}
       </div>
